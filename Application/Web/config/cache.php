@@ -47,6 +47,14 @@ return [
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
 
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'connection' => env('DB_CACHE_CONNECTION', 'mongodb'),
+            'lock_connection' => env('DB_CACHE_LOCK_CONNECTION', 'mongodb'),
+            'table' => env('DB_CACHE_TABLE', 'cache'),
+            'lock_table' => env('DB_CACHE_LOCK_TABLE', 'cache_locks'),
+        ],
+
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),

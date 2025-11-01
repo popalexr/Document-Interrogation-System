@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use MongoDB\Laravel\Schema\Blueprint;
 
 return new class extends Migration
 {
@@ -11,16 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cache', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->mediumText('value');
-            $table->integer('expiration');
+        // cache
+        Schema::connection('mongodb')->create('cache', function (Blueprint $collection) {
+            $collection->index('expiration');
         });
 
-        Schema::create('cache_locks', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->string('owner');
-            $table->integer('expiration');
+        // cache_locks
+        Schema::connection('mongodb')->create('cache_locks', function (Blueprint $collection) {
+            $collection->index('owner');
+            $collection->index('expiration');
         });
     }
 
@@ -29,7 +28,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cache');
-        Schema::dropIfExists('cache_locks');
+        Schema::connection('mongodb')->drop('cache');
+        Schema::connection('mongodb')->drop('cache_locks');
     }
 };
