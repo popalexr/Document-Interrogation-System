@@ -14,7 +14,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { BookOpen, File, Folder, LayoutGrid, Star, Trash } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -24,16 +24,33 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'My Files',
+        title: 'My Documents',
         href: '#',
         icon: Folder,
     },
     {
-        title: 'Shared folders',
+        title: 'AI Interrogations',
         href: '#',
-        icon: Folder,
+        icon: BookOpen,
+    },
+    {
+        title: 'Recent files',
+        href: '#',
+        icon: File,
+    },
+    {
+        title: 'Favorites',
+        href: '#',
+        icon: Star,
+    },
+    {
+        title: 'Trash',
+        href: '#',
+        icon: Trash,
     }
 ];
+
+const footerNavItems: NavItem[] = [];
 </script>
 
 <template>
