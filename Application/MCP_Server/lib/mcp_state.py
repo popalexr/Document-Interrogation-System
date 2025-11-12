@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import os
 import sys
+import json
 from typing import Any, Dict, Optional
 
 from mcp import ClientSession, StdioServerParameters
@@ -79,7 +80,12 @@ class MCPState:
                     if text is not None:
                         texts.append(text)
                 if texts:
-                    return {"content": "\n".join(texts)}
+                    text = "\n".join(texts).strip()
+
+                    try:
+                        return json.loads(text)
+                    except:
+                        return {"result": text}
 
             return {"result": repr(result)}
         except Exception:
