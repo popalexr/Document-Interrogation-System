@@ -4,10 +4,12 @@ import dotenv
 import os
 import contextlib
 
-from typing import Any, Dict, Optional
+from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from lib.mcp_state import MCPState
+
+from lib.payloads import *
 
 dotenv.load_dotenv()
 
@@ -43,6 +45,14 @@ async def ping() -> dict[str, Any]:
     """
 
     return await mcp_state.call_tool("ping", {})
+
+@app.post("/query", tags=["Query"])
+async def query(payload: QueryPayload) -> dict[str, Any]:
+    """
+    Query a document by its ID with a specific question.
+    """
+
+    return await mcp_state.call_tool("query", {"payload": payload.model_dump()})
 
 if __name__ == "__main__":
     import uvicorn
