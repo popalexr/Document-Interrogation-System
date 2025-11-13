@@ -2,8 +2,8 @@ from pydantic import BaseModel
 from typing import Any, Dict, Optional
 
 class QueryPayload(BaseModel):
-    document_id: Optional[str] = None
-    question: Optional[str] = None
+    document_id: str
+    question: str
     extra: Optional[Dict[str, Any]] = None
 
 
