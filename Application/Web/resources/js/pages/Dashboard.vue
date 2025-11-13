@@ -5,148 +5,81 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/Icon.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { computed, ref } from 'vue';
-
-type Folder = {
-    id: number;
-    name: string;
-};
-
-type FileItem = {
-    id: number;
-    name: string;
-    date: string;
-    ext: 'PDF' | 'DOC' | 'XLS' | 'PPT' | 'TXT';
-    folderId: number | null;
-};
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { computed } from 'vue';
+import Spinner from '@/components/ui/spinner/Spinner.vue';
+import { MoreHorizontal } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
 ];
 
-const user = usePage().props.auth.user;
+const page = usePage();
+const user = page.props.auth.user as { name: string };
 
-const folders = ref<Folder[]>([
-    { id: 1, name: 'Contract Versions' },
-    { id: 2, name: 'Big Kahuna (1)' },
-    { id: 3, name: 'Biffco Enterprise corp.' },
-    { id: 4, name: 'Abstergo Ltd.' },
-    { id: 5, name: 'Contract Versions' },
-]);
+type UploadItem = {
+  _id: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  status: 'quarantine' | string;
+  r2_key: string;
+  created_at?: string | Date;
+}
 
-const files = ref<FileItem[]>([
-    { id: 1, name: 'Contracts No. 442', ext: 'PDF', date: '15 Mar 2024', folderId: null },
-    { id: 2, name: 'Application Terms', ext: 'DOC', date: '3 Hours Ago', folderId: null },
-    { id: 3, name: 'Financial Spread Sheet', ext: 'XLS', date: 'Yesterday', folderId: null },
-    { id: 4, name: 'Hilton Hotel', ext: 'PPT', date: '02 Jun 2024', folderId: null },
-    { id: 5, name: 'Hilton Hotel', ext: 'PPT', date: '02 Jun 2024', folderId: null },
-    { id: 6, name: 'Application Terms', ext: 'DOC', date: '3 Hours Ago', folderId: null },
-    { id: 7, name: 'Contracts No. 442', ext: 'PDF', date: '15 Mar 2024', folderId: null },
-    { id: 8, name: 'Hardware Projects ver.2', ext: 'PDF', date: '15 Mar 2024', folderId: null },
-    { id: 9, name: 'Application Terms', ext: 'DOC', date: '3 Hours Ago', folderId: null },
-    { id: 10, name: 'Financial Spread Sheet', ext: 'XLS', date: 'Yesterday', folderId: null },
-    { id: 11, name: 'Application Terms', ext: 'DOC', date: '3 Hours Ago', folderId: null },
-]);
+const uploads = computed<UploadItem[]>(() => ((page.props as any).uploads ?? []) as UploadItem[])
 
-type Item =
-    | ({ type: 'folder'; meta: string } & Pick<Folder, 'id' | 'name'>)
-    | ({ type: 'file' } & FileItem);
+function formatSize(bytes: number | undefined): string {
+  if (!bytes && bytes !== 0) return ''
+  const units = ['B','KB','MB','GB']
+  let b = bytes
+  let i = 0
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++ }
+  return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+}
 
-// Derived helpers
-const folderMeta = (folderId: number) => {
-    const count = files.value.filter((f) => f.folderId === folderId).length;
-    return `(${count}) Files`;
-};
+function formatDate(d: string | Date | undefined): string {
+  if (!d) return ''
+  const date = typeof d === 'string' ? new Date(d) : d
+  return date.toLocaleString()
+}
 
-// Merge folders and root-level files for display.
-const items = computed<Item[]>(() => {
-    const folderItems: Item[] = folders.value.map((f) => ({
-        type: 'folder',
-        id: f.id,
-        name: f.name,
-        meta: folderMeta(f.id),
-    }));
-    const rootFiles = files.value.filter((f) => f.folderId === null);
-    const fileItems: Item[] = rootFiles.map((f) => ({
-        type: 'file',
-        ...f,
-    }));
-    return [...folderItems, ...fileItems];
-});
+function fileExt(name: string | undefined): string {
+  if (!name) return ''
+  const idx = name.lastIndexOf('.')
+  if (idx === -1) return ''
+  return name.slice(idx + 1).toUpperCase()
+}
 
-const uploads = [
-    { id: 1, name: 'Salse proposal.doc', size: '27.5MB', progress: 68 },
-    { id: 2, name: 'Contracts 742.pdf', size: '4.4MB', progress: 100 },
-    { id: 3, name: 'Financial spread sheet.xls', size: '3.7MB', progress: 100 },
-];
-
-const sharePeople = [
-    { id: 1, initials: 'AK', name: 'Asmaa Kassim', email: 'asmaa-kas@gmail.com', role: 'file owner' },
-    { id: 2, initials: 'AA', name: 'Abeer Abdullah', email: 'adeer-abd@gmail.com', role: 'can edit' },
-    { id: 3, initials: 'EA', name: 'Ebrahim Ali', email: 'ebrahim-ali@gmail.com', role: 'can view' },
-];
-
-const extColor = (ext: FileItem['ext']) => {
-    switch (ext) {
-        case 'PDF':
-            return 'bg-red-500 text-white';
-        case 'DOC':
-            return 'bg-blue-600 text-white';
-        case 'XLS':
-            return 'bg-green-600 text-white';
-        case 'PPT':
-            return 'bg-amber-500 text-white';
-        default:
-            return 'bg-muted text-foreground';
-    }
-};
-
-// Drag & drop state and handlers for moving files into folders
-const draggingFileId = ref<number | null>(null);
-const dragOverFolderId = ref<number | null>(null);
-
-const onDragStartFile = (id: number, e: DragEvent) => {
-    draggingFileId.value = id;
-    if (e.dataTransfer) {
-        e.dataTransfer.setData('text/plain', String(id));
-        e.dataTransfer.effectAllowed = 'move';
-    }
-};
-
-const onDragEndFile = () => {
-    draggingFileId.value = null;
-    dragOverFolderId.value = null;
-};
-
-const onFolderDragOver = (folderId: number, e: DragEvent) => {
-    e.preventDefault();
-    dragOverFolderId.value = folderId;
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-};
-
-const onFolderDragLeave = (folderId: number) => {
-    if (dragOverFolderId.value === folderId) {
-        dragOverFolderId.value = null;
-    }
-};
-
-// TODO: Replace with actual backend update call.
-const onFolderDrop = (folderId: number, e: DragEvent) => {
-    e.preventDefault();
-    const payload = e.dataTransfer?.getData('text/plain');
-    const fileId = payload ? Number(payload) : draggingFileId.value;
-    if (fileId != null && !Number.isNaN(fileId)) {
-        const idx = files.value.findIndex((f) => f.id === fileId);
-        if (idx !== -1) {
-            files.value[idx] = { ...files.value[idx], folderId };
-        }
-    }
-    dragOverFolderId.value = null;
-    draggingFileId.value = null;
-};
+function extColor(ext: string): string {
+  switch (ext) {
+    case 'PDF':
+      return 'bg-red-500 text-white'
+    case 'DOC':
+    case 'DOCX':
+      return 'bg-blue-600 text-white'
+    case 'XLS':
+    case 'XLSX':
+      return 'bg-green-600 text-white'
+    case 'PPT':
+    case 'PPTX':
+      return 'bg-amber-500 text-white'
+    case 'TXT':
+      return 'bg-muted text-foreground'
+    default:
+      return 'bg-muted text-foreground'
+  }
+}
 </script>
 
 <template>
@@ -154,172 +87,73 @@ const onFolderDrop = (folderId: number, e: DragEvent) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-            <div class="grid gap-4 xl:grid-cols-3">
-                <!-- Left: Library -->
-                <Card class="xl:col-span-2">
-                    <CardHeader class="pb-0">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <CardTitle class="text-xl">Root folder</CardTitle>
-                                <p class="text-muted-foreground mt-1 text-xs">
-                                    64.2 MB • Owner: {{user.name}}
-                                </p>
-                            </div>
-                            <Button variant="outline" class="gap-2">
-                                <Icon name="upload" />
-                                Upload File
-                            </Button>
+            <Card>
+                <CardHeader class="pb-0">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <CardTitle class="text-xl">My uploads</CardTitle>
+                            <p class="text-muted-foreground mt-1 text-xs">Owner: {{ user.name }}</p>
                         </div>
-                    </CardHeader>
-                    <CardContent class="pt-4">
-                        <!-- Unified grid: folders and files, sorted by name -->
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                            <div
-                                v-for="item in items"
-                                :key="`${item.type}-${item.id}`"
-                                class="group rounded-lg border p-3 hover:shadow-sm"
-                                :class="{
-                                    'ring-2 ring-primary border-primary': item.type === 'folder' && dragOverFolderId === item.id,
-                                }"
-                                :draggable="item.type === 'file'"
-                                @dragstart="item.type === 'file' && onDragStartFile(item.id, $event)"
-                                @dragend="item.type === 'file' && onDragEndFile()"
-                                @dragover.prevent="item.type === 'folder' && onFolderDragOver(item.id, $event)"
-                                @dragleave="item.type === 'folder' && onFolderDragLeave(item.id)"
-                                @drop="item.type === 'folder' && onFolderDrop(item.id, $event)"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <!-- Icon + badge area -->
-                                    <div
-                                        class="relative flex size-10 items-center justify-center rounded-md border"
+                    </div>
+                </CardHeader>
+                <CardContent class="pt-4">
+                    <div v-if="!uploads.length" class="text-sm text-muted-foreground">No uploads yet.</div>
+                    <ul v-else class="divide-y rounded-md border">
+                        <li v-for="u in uploads" :key="u._id" class="flex items-center justify-between gap-3 px-4 py-3">
+                            <div class="min-w-0 flex-1 flex items-start gap-3">
+                                <div class="relative flex size-10 items-center justify-center rounded-md border">
+                                    <Icon name="file" class="h-6 w-6" />
+                                    <span
+                                        v-if="fileExt(u.original_name)"
+                                        class="absolute -left-1 -top-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                                        :class="extColor(fileExt(u.original_name))"
                                     >
-                                        <Icon :name="item.type === 'folder' ? 'folder' : 'file'" class="h-6 w-6" />
-                                        <template v-if="item.type === 'file'">
-                                            <span
-                                                class="absolute -left-1 -top-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
-                                                :class="extColor(item.ext)"
-                                            >
-                                                {{ item.ext }}
-                                            </span>
-                                        </template>
-                                    </div>
-
-                                    <!-- Details -->
-                                    <div class="min-w-0">
-                                        <div class="truncate text-sm font-medium group-hover:underline">
-                                            {{ item.name }}
-                                        </div>
-                                        <div class="text-muted-foreground text-xs">
-                                            <template v-if="item.type === 'folder'">
-                                                {{ item.meta }}
-                                            </template>
-                                            <template v-else>
-                                                {{ item.date }}
-                                            </template>
-                                        </div>
-                                    </div>
+                                        {{ fileExt(u.original_name) }}
+                                    </span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">{{ u.original_name }}</p>
+                                    <p class="text-xs text-muted-foreground mt-0.5">{{ formatSize(u.size) }} • {{ u.mime_type }} • {{ formatDate(u.created_at as any) }}</p>
                                 </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Right: Upload + Share -->
-                <div class="flex flex-col gap-4">
-                    <!-- Upload File -->
-                    <Card>
-                        <CardHeader class="pb-2">
-                            <CardTitle>Upload File</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div
-                                class="rounded-xl border border-dashed p-6 text-center"
-                            >
-                                <div class="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-secondary">
-                                    <Icon name="upload" />
+                            <div class="shrink-0">
+                                <div v-if="u.status === 'quarantine'">
+                                    <TooltipProvider :delay-duration="0">
+                                        <Tooltip>
+                                            <TooltipTrigger as-child>
+                                                <div>
+                                                    <Badge variant="secondary">
+                                                        <Spinner size="sm" />
+                                                    </Badge>
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Verifying</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
-                                <div class="text-sm font-medium">
-                                    Drag your files here
-                                </div>
-                                <div class="text-muted-foreground mt-1 text-xs">
-                                    DOC, PDF, XLSX, and PPT formats, up to 50 MB
-                                </div>
-                                <div class="mt-3">
-                                    <Button size="sm">Browse Files</Button>
-                                </div>
-                            </div>
-
-                            <div
-                                v-for="item in uploads"
-                                :key="item.id"
-                                class="rounded-lg border p-3"
-                            >
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2">
-                                        <Icon name="file" class="text-muted-foreground" />
-                                        <div class="text-sm font-medium">
-                                            {{ item.name }}
-                                        </div>
-                                    </div>
-                                    <div class="text-muted-foreground text-xs">
-                                        {{ item.size }}
-                                    </div>
-                                </div>
-                                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
-                                    <div
-                                        class="h-full rounded-full bg-primary transition-all"
-                                        :style="{ width: `${item.progress}%` }"
-                                    />
+                                <div v-else>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger as-child>
+                                            <Button variant="ghost" size="icon" class="h-8 w-8">
+                                                <MoreHorizontal class="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" class="w-40">
+                                            <DropdownMenuItem>View</DropdownMenuItem>
+                                            <DropdownMenuItem>Download</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem>Interrogate</DropdownMenuItem>
+                                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Share panel -->
-                    <Card>
-                        <CardHeader class="pb-2">
-                            <CardTitle>
-                                Share "Financial Spread Sheet.xls"
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div class="flex gap-2">
-                                <Input
-                                    placeholder="add a name, group, or an email"
-                                />
-                                <Button variant="outline" class="whitespace-nowrap"
-                                    >can view</Button
-                                >
-                            </div>
-
-                            <div
-                                v-for="person in sharePeople"
-                                :key="person.id"
-                                class="flex items-center justify-between gap-3 rounded-lg border p-3"
-                            >
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <Avatar>
-                                        <AvatarFallback>{{ person.initials }}</AvatarFallback>
-                                    </Avatar>
-                                    <div class="min-w-0">
-                                        <div class="truncate text-sm font-medium">
-                                            {{ person.name }}
-                                        </div>
-                                        <div
-                                            class="text-muted-foreground truncate text-xs"
-                                        >
-                                            {{ person.email }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="text-muted-foreground text-xs">
-                                    {{ person.role }}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                        </li>
+                    </ul>
+                </CardContent>
+            </Card>
         </div>
     </AppLayout>
-</template>
+  </template>
