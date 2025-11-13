@@ -10,8 +10,11 @@ from fastapi import FastAPI
 from lib.mcp_state import MCPState
 
 from lib.payloads import *
+from lib.openai import OpenAIClient
 
 dotenv.load_dotenv()
+
+mcp_state = MCPState()
 
 @contextlib.asynccontextmanager
 async def FastAPI_lifespan(app: FastAPI):
@@ -25,7 +28,7 @@ async def FastAPI_lifespan(app: FastAPI):
 
 app = FastAPI(title=os.getenv('HTTP_NAME'), version=os.getenv('HTTP_VERSION'), lifespan=FastAPI_lifespan)
 
-mcp_state = MCPState()
+OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")) # Initialize OpenAI client singleton
 
 """
 REST API Endpoints
