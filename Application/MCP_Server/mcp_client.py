@@ -11,6 +11,7 @@ from lib.mcp_state import MCPState
 
 from lib.payloads import *
 from lib.openai import OpenAIClient
+from lib.mongo import MongoDBClient
 
 dotenv.load_dotenv()
 
@@ -29,6 +30,7 @@ async def FastAPI_lifespan(app: FastAPI):
 app = FastAPI(title=os.getenv('HTTP_NAME'), version=os.getenv('HTTP_VERSION'), lifespan=FastAPI_lifespan)
 
 OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")) # Initialize OpenAI client singleton
+MongoDBClient(os.getenv("MONGODB_URI"), os.getenv("MONGODB_DB")) # Initialize MongoDB client singleton
 
 """
 REST API Endpoints
