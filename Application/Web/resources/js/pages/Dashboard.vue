@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/Icon.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { computed } from 'vue';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { MoreHorizontal } from 'lucide-vue-next';
+import documents from '@/routes/documents';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -142,7 +143,16 @@ function extColor(ext: string): string {
                                             <DropdownMenuItem>View</DropdownMenuItem>
                                             <DropdownMenuItem>Download</DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem>Interrogate</DropdownMenuItem>
+                                            <DropdownMenuItem :as-child="true">
+                                                <Link
+                                                    as="button"
+                                                    class="block w-full cursor-pointer text-left"
+                                                    :href="documents.interrogate.url({ query: { id: u._id } })"
+                                                    prefetch
+                                                >
+                                                    Interrogate
+                                                </Link>
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem>Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
