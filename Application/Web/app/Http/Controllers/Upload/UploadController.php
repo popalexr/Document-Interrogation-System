@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Upload;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Uploads\UploadRequest;
 use App\Models\Upload;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -17,13 +18,9 @@ class UploadController extends Controller
         $this->user = $request->user();
     }
 
-    public function store(Request $request)
+    public function store(UploadRequest $request)
     {
-        $validated = $request->validate([
-            'file' => ['required', 'file'],
-        ]);
-
-        $file = $validated['file'];
+        $file = $request['file'];
 
         $originalName = $file->getClientOriginalName();
         $mime = $file->getClientMimeType();
@@ -43,20 +40,20 @@ class UploadController extends Controller
         $disk = Storage::disk('r2');
         $disk->put($key, fopen($file->getRealPath(), 'r'));
 
-        $upload = Upload::create([
-            'user_id' => $this->user->getKey(),
-            'original_name' => $originalName,
-            'mime_type' => $mime,
-            'size' => $size,
-            'checksum' => $checksum,
-            'r2_bucket' => config('filesystems.disks.r2.bucket'),
-            'r2_key' => $key,
-            'status' => 'quarantine',
-            'meta' => [
+        $upload = $this->addFileInDatabase(
+            userId: (string) $this->user->getKey(),
+            originalName: $originalName,
+            mimeType: $mime,
+            size: $size,
+            checksum: $checksum,
+            r2Bucket: config('filesystems.disks.r2.bucket'),
+            r2Key: $key,
+            status: 'quarantine',
+            meta: [
                 'ip' => $request->ip(),
                 'user_agent' => (string) $request->userAgent(),
             ],
-        ]);
+        );
 
         return response()->json([
             'id' => (string) $upload->_id,
@@ -66,6 +63,30 @@ class UploadController extends Controller
             'mime_type' => $upload->mime_type,
             'original_name' => $upload->original_name,
         ], 201);
+    }
+
+    private function addFileInDatabase(
+        string $userId,
+        string $originalName,
+        string $mimeType,
+        int    $size,
+        string $checksum,
+        string $r2Bucket,
+        string $r2Key,
+        string $status,
+        array  $meta = []
+    ): Upload {
+        return Upload::create([
+            'user_id' => $userId,
+            'original_name' => $originalName,
+            'mime_type' => $mimeType,
+            'size' => $size,
+            'checksum' => $checksum,
+            'r2_bucket' => $r2Bucket,
+            'r2_key' => $r2Key,
+            'status' => $status,
+            'meta' => $meta,
+        ]);
     }
 }
 

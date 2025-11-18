@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Documents;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Interrogations\DocumentInterrogationRequest;
 use App\Models\Interrogation;
 use App\Models\Upload;
 use Illuminate\Http\Request;
@@ -13,28 +14,27 @@ use MongoDB\BSON\ObjectId;
 
 class InterrogateDocumentController extends Controller
 {
+    private $userId;
+    private $documentId;
+
+    public function __construct(private Request $request)
+    {
+        $this->userId = optional($request->user())->getKey();
+        $this->documentId = (string) $request->query('id', null);
+    }
+
     /**
      * GET: Show the document interrogation view.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $id = (string) $request->query('id', '');
-        $userId = optional($request->user())->getKey();
-
-        if ($id === '' || !$userId) {
+        if (blank($this->documentId) || blank($this->userId)) {
             abort(404);
         }
 
-        $upload = null;
-        if (preg_match('/^[a-f0-9]{24}$/i', $id)) {
-            $oid = new ObjectId($id);
-            $upload = Upload::query()
-                ->where('_id', $oid)
-                ->where('user_id', $userId)
-                ->first();
-        }
+        $upload = $this->getDocumentById();
 
-        if (!$upload) {
+        if (blank($upload)) {
             abort(404);
         }
 
@@ -58,23 +58,18 @@ class InterrogateDocumentController extends Controller
     /**
      * POST: Send a query to interrogate the document.
      */
-    public function store(Request $request)
+    public function store(DocumentInterrogationRequest $request)
     {
-        $validated = $request->validate([
-            'document_id' => ['required', 'string'],
-            'query' => ['required', 'string', 'max:5000'],
-        ]);
-
         $payload = [
-            'document_id' => $validated['document_id'],
-            'question'    => $validated['query'],
+            'document_id' => $request['document_id'],
+            'question'    => $request['query'],
             'extra'       => null
         ];
 
         $this->storeDocumentInterrogation([
-            'document_id' => $validated['document_id'],
+            'document_id' => $request['document_id'],
             'role'        => 'user',
-            'content'     => $validated['query']
+            'content'     => $request['query']
         ]);
 
         // make a POST request to the MCP server
@@ -89,7 +84,7 @@ class InterrogateDocumentController extends Controller
         $data = $response->json();
 
         $this->storeDocumentInterrogation([
-            'document_id' => $validated['document_id'],
+            'document_id' => $request['document_id'],
             'role'        => 'assistant',
             'content'     => $data['answer'] ?? ''
         ]);
@@ -97,6 +92,19 @@ class InterrogateDocumentController extends Controller
         return response()->json([
             'answer' => $data['answer'] ?? '',
         ]);
+    }
+
+    private function getDocumentById()
+    {
+        if (preg_match('/^[a-f0-9]{24}$/i', $this->documentId)) {
+            $oid = new ObjectId($this->documentId);
+            return Upload::query()
+                ->where('_id', $oid)
+                ->where('user_id', $this->userId)
+                ->first();
+        }
+
+        return null;
     }
 
     private function storeDocumentInterrogation(array $data): void
