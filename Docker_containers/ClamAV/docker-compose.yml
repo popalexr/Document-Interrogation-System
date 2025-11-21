@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  clamav:
+    image: clamav/clamav:latest
+    container_name: clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"               # expose clamd TCP port
+    volumes:
+      - clamav-db:/var/lib/clamav # persist virus DB between restarts
+    environment:
+      - CLAMD_CONF_MaxFileSize=100M
+      - CLAMD_CONF_StreamMaxLength=100M
+
+volumes:
+  clamav-db:
