@@ -62,6 +62,7 @@ class InterrogateDocumentController extends Controller
     {
         $payload = [
             'document_id' => $request['document_id'],
+            'user_id'     => $this->userId,
             'question'    => $request['query'],
             'extra'       => null
         ];
@@ -73,7 +74,9 @@ class InterrogateDocumentController extends Controller
         ]);
 
         // make a POST request to the MCP server
-        $response = Http::post(config('mcp.host') . ':' . config('mcp.port') . config('mcp.query_endpoint'), $payload);
+        $response = Http::timeout(120)
+            ->connectTimeout(10)
+            ->post(config('mcp.host') . ':' . config('mcp.port') . config('mcp.query_endpoint'), $payload);
 
         if ($response->failed()) {
             return response()->json([

@@ -25,44 +25,33 @@ def initialize_mcp(mcp_instance):
     def query(payload: QueryPayload) -> dict:
         """
         Query a document by its ID with a specific question.
-        Payload must contain 'document_id' and 'question' keys.
+        Payload must contain 'document_id', 'user_id' and 'question' keys.
         """
 
         document_id = payload.document_id
         question = payload.question
 
-        document_path = __get_document_path(document_id)
-
-        stream = get_r2_stream(document_path)
-
         client = OpenAIClient().get_client()
 
-        uploaded_file = client.files.create(
-            file=(document_path, stream),
-            purpose="assistants",
-        )
+        vector_store = find_vector_store_by_name("documents-" + payload.user_id)
 
-        vector_store = client.vector_stores.create(
-            name="project-docs",
-        )
-
-        client.vector_stores.files.create_and_poll(
-            vector_store_id=vector_store.id,
-            file_id=uploaded_file.id,
-        )
+        if vector_store is None:
+            raise ValueError(f"Vector store for this user not found.")
 
         response = client.responses.create(
-            model="gpt-4o",
+            model="gpt-5-nano",
             tools=[
                 {
                     "type": "file_search",
                     "vector_store_ids": [vector_store.id],
+                    "filters": {
+                        "type": "eq",
+                        "key": "document_id",
+                        "value": str(document_id),
+                    },
                 }
             ],
-            instructions=(
-                "Use the provided documents to answer the user's question as accurately as possible. "
-                "If the information is not available in the documents, respond with 'I don't know.'"
-            ),
+            instructions=QUERY_SYS_PROMPT,
             input=[
                 {
                     "role": "user",
@@ -73,7 +62,14 @@ def initialize_mcp(mcp_instance):
             ],
         )
 
-        answer = response.output_text
+        answer_parts = []
+        for out in response.output or []:
+            for block in getattr(out, "content", []) or []:
+                text = getattr(block, "text", None)
+                if text:
+                    answer_parts.append(text)
+
+        answer = "".join(answer_parts).strip()
         return {"answer": answer}
     
     @mcp.tool()
