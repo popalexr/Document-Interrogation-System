@@ -14,7 +14,12 @@ class UploadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file'],
+            'file' => [
+                'required',
+                'file',
+                'mimes:' . implode(',', config('uploads.allowed_mime_types')),
+                'clamav' // Scan the file for viruses using ClamAV
+            ],
         ];
     }
 }

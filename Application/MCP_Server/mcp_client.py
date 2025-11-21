@@ -59,6 +59,14 @@ async def query(payload: QueryPayload) -> dict[str, Any]:
 
     return await mcp_state.call_tool("query", {"payload": payload.model_dump()})
 
+@app.post("/vectorize", tags=["Vectorize"])
+async def vectorize(payload: VectorizePayload) -> dict[str, Any]:
+    """
+    Vectorize a document by its ID.
+    """
+
+    return await mcp_state.call_tool("vectorize", {"payload": payload.model_dump()})
+
 if __name__ == "__main__":
     import uvicorn
 

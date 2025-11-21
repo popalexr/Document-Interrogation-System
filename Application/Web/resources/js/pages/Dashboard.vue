@@ -118,7 +118,7 @@ function extColor(ext: string): string {
                                 </div>
                             </div>
                             <div class="shrink-0">
-                                <div v-if="u.status === 'quarantine'">
+                                <div v-if="u.status === 'uploading'">
                                     <TooltipProvider :delay-duration="0">
                                         <Tooltip>
                                             <TooltipTrigger as-child>
@@ -128,7 +128,7 @@ function extColor(ext: string): string {
                                                     </Badge>
                                                 </div>
                                             </TooltipTrigger>
-                                            <TooltipContent>Verifying</TooltipContent>
+                                            <TooltipContent>Uploading</TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
                                 </div>

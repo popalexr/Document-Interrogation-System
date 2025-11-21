@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Upload;
 
+use App\Events\Uploads\FileUpload;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Uploads\UploadRequest;
 use App\Models\Upload;
@@ -27,7 +28,7 @@ class UploadController extends Controller
         $size = $file->getSize();
         $checksum = hash_file('sha256', $file->getRealPath());
 
-        $prefix = config('filesystems.disks.r2') ? env('R2_QUARANTINE_PREFIX', 'quarantine') : 'quarantine';
+        $prefix = config('filesystems.disks.r2') ? env('R2_UPLOADS_PREFIX', 'uploads') : 'uploads';
         $uuid = (string) Str::uuid();
         $safeName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME));
         $extension = $file->getClientOriginalExtension();
@@ -48,12 +49,14 @@ class UploadController extends Controller
             checksum: $checksum,
             r2Bucket: config('filesystems.disks.r2.bucket'),
             r2Key: $key,
-            status: 'quarantine',
+            status: 'uploading',
             meta: [
                 'ip' => $request->ip(),
                 'user_agent' => (string) $request->userAgent(),
             ],
         );
+
+        FileUpload::dispatch($upload->_id);
 
         return response()->json([
             'id' => (string) $upload->_id,

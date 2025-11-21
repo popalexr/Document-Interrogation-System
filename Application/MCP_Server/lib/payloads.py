@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 class QueryPayload(BaseModel):
     document_id: str
+    user_id: str
     question: str
     extra: Optional[Dict[str, Any]] = None
 
@@ -16,3 +17,9 @@ class EditPayload(BaseModel):
 class GenericPayload(BaseModel):
     action: str
     data: Optional[Dict[str, Any]] = None
+
+
+class VectorizePayload(BaseModel):
+    document_id: str
+    user_id: str
+    extra: Optional[Dict[str, Any]] = None
