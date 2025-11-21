@@ -28,5 +28,5 @@ CAPABILITIES:
 
 FAILURE CONDITION:
 If you cannot fully answer the question using the provided document, respond exactly with:
-"This information is not present in this document."
+"This information is not present in this document." in the language of the query.
 """

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const page = usePage();
 
@@ -55,6 +55,23 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string; at: Date };
 const messages = ref<ChatMessage[]>([]);
 const input = ref('');
 const sending = ref(false);
+const chatContainer = ref<HTMLElement | null>(null);
+
+const scrollToBottom = () => {
+  const el = chatContainer.value;
+  if (!el) return;
+  requestAnimationFrame(() => {
+    el.scrollTop = el.scrollHeight;
+  });
+};
+
+watch(
+  () => messages.value.length,
+  async () => {
+    await nextTick();
+    scrollToBottom();
+  }
+);
 
 async function sendMessage() {
   const text = input.value.trim();
@@ -96,6 +113,7 @@ async function sendMessage() {
 
 onMounted(() => {
   messages.value = page.props.chats || [];
+  nextTick(scrollToBottom);
 });
 </script>
 
@@ -118,7 +136,7 @@ onMounted(() => {
             <Separator />
             <div class="space-y-3">
               <div class="text-sm font-medium">Chat</div>
-              <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1" ref="chatContainer">
                 <div v-if="!messages.length" class="text-xs text-muted-foreground">
                   Start by asking a question about this document.
                 </div>
