@@ -50,6 +50,16 @@ class UploadOnOpenAI implements ShouldQueue
 
         $response = $response->json();
 
+        if (!array_key_exists('status', $response))
+        {
+            Log::error('MCP Server response missing status for vectorization.', [
+                'file_id' => (string) $this->file->_id,
+                'response' => $response,
+            ]);
+
+            throw new \Exception('MCP Server vectorization response invalid.');
+        }
+
         if ($response['status'] !== 'vectorization_complete') {
             Log::error('MCP Server returned unexpected status for vectorization.', [
                 'file_id' => (string) $this->file->_id,
