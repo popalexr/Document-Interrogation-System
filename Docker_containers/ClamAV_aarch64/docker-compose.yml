@@ -2,13 +2,18 @@ version: "3.8"
 
 services:
   clamav:
-    image: mkodockx/docker-clamav:alpine
+    image: clamav/clamav:latest
+    platform: linux/amd64
     container_name: clamav
     restart: unless-stopped
     ports:
       - "3310:3310"
     volumes:
-      - clamav-db:/var/lib/clamav 
+      - clamav-db:/var/lib/clamav
+    environment:
+      - CLAMD_CONF_MaxFileSize=100M
+      - CLAMD_CONF_StreamMaxLength=100M
+
 
 volumes:
   clamav-db:
