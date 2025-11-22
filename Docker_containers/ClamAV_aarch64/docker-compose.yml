@@ -1,0 +1,9 @@
+services:
+  clamav:
+    image: mkodockx/docker-clamav:alpine
+    container_name: clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav-db:/var/lib/clamav
