@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Upload } from 'lucide-vue-next'
@@ -17,6 +18,7 @@ type UploadState = {
 }
 
 const uploads = ref<UploadState[]>([])
+const shouldReload = ref(false)
 
 const emit = defineEmits<{
   (e: 'files-selected', files: FileList | File[]): void
@@ -67,13 +69,19 @@ function getCsrfToken(): string | null {
 }
 
 function startUploads(files: File[]) {
+  shouldReload.value = false
   uploads.value = files.map((f) => ({ file: f, progress: 0, status: 'idle' }))
   // upload sequentially to simplify UI/state
   void uploadNext(0)
 }
 
 async function uploadNext(index: number): Promise<void> {
-  if (index >= uploads.value.length) return
+  if (index >= uploads.value.length) {
+    if (shouldReload.value) {
+      router.reload({ preserveScroll: true })
+    }
+    return
+  }
   const item = uploads.value[index]
   item.status = 'uploading'
 
@@ -116,6 +124,7 @@ async function uploadNext(index: number): Promise<void> {
     item.response = result
     item.status = 'done'
     item.progress = 100
+    shouldReload.value = true
   } catch (e: any) {
     item.status = 'error'
     item.error = e?.message ?? 'Upload failed'
