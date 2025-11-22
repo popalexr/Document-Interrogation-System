@@ -51,7 +51,7 @@ function formatSize(bytes?: number): string {
   return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string; at: Date };
+type ChatMessage = { role: 'user' | 'assistant'; content: string; at: Date | string; loading?: boolean };
 const messages = ref<ChatMessage[]>([]);
 const input = ref('');
 const sending = ref(false);
@@ -75,19 +75,28 @@ watch(
 
 async function sendMessage() {
   const text = input.value.trim();
-  if (!text) return;
-  messages.value.push({ role: 'user', content: text, at: new Date() });
+  if (!text || sending.value) return;
+  const userMessage: ChatMessage = { role: 'user', content: text, at: new Date() };
+  messages.value.push(userMessage);
+  // First assistant reply shows thinking text and owns the spinner until chunks arrive.
+  messages.value.push({ role: 'assistant', content: 'Thinking...', at: new Date(), loading: true });
+  // Use the reactive entry from the array so stream mutations repaint the UI.
+  let assistantMessage: ChatMessage | null = messages.value[messages.value.length - 1] ?? null;
+  let hasStarted = false;
   input.value = '';
   sending.value = true;
 
   try {
+    if (!assistantMessage) {
+      throw new Error('Unable to create assistant message entry.');
+    }
     const tokenEl = document.head.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = tokenEl?.content ?? '';
     const did = documentInfo.value?._id;
     const res = await fetch(`/documents/interrogate`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
+        'Accept': 'text/event-stream',
         'Content-Type': 'application/json',
         ...(token ? { 'X-CSRF-TOKEN': token } : {}),
       },
@@ -101,11 +110,87 @@ async function sendMessage() {
       const data = await res.json().catch(() => ({} as any));
       throw new Error(data?.message || `Request failed (${res.status})`);
     }
-    const data = await res.json();
-    const answer = (data && typeof data.answer === 'string') ? data.answer : 'No answer returned.';
-    messages.value.push({ role: 'assistant', content: answer, at: new Date() });
+    const reader = res.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body.');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const handleEvent = (raw: string) => {
+      const line = raw.trim();
+      if (!line.startsWith('data:')) return;
+
+      const jsonPayload = line.replace(/^data:\s*/, '');
+      let payload: any = null;
+
+      try {
+        payload = JSON.parse(jsonPayload);
+      } catch (err) {
+        return;
+      }
+
+      if (payload?.type === 'chunk' && typeof payload.delta === 'string') {
+        if (!hasStarted) {
+          assistantMessage.content = '';
+          hasStarted = true;
+        }
+        assistantMessage.content += payload.delta;
+        assistantMessage.at = new Date();
+        scrollToBottom();
+      } else if (payload?.type === 'done') {
+        if (typeof payload.answer === 'string') {
+          assistantMessage.content = payload.answer;
+        }
+        assistantMessage.loading = false;
+        assistantMessage.at = new Date();
+        scrollToBottom();
+      } else if (payload?.type === 'error') {
+        assistantMessage.content = payload.message ?? 'Error performing interrogation.';
+        assistantMessage.loading = false;
+        assistantMessage.at = new Date();
+      }
+    };
+
+    const processBuffer = (flush = false) => {
+      let working = buffer;
+      const events = working.split(/\r?\n\r?\n/);
+      working = events.pop() ?? '';
+
+      for (const rawEvent of events) {
+        handleEvent(rawEvent);
+      }
+
+      if (flush && working.trim()) {
+        handleEvent(working);
+        working = '';
+      }
+
+      buffer = working;
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      processBuffer();
+    }
+
+    buffer += decoder.decode();
+    processBuffer(true);
+
+    if (!assistantMessage.content.trim()) {
+      assistantMessage.content = 'No answer returned.';
+      assistantMessage.at = new Date();
+    }
   } catch (e: any) {
-    messages.value.push({ role: 'assistant', content: e?.message ?? 'Error performing interrogation.', at: new Date() });
+    if (assistantMessage) {
+      assistantMessage.content = e?.message ?? 'Error performing interrogation.';
+      assistantMessage.loading = false;
+      assistantMessage.at = new Date();
+    }
+    scrollToBottom();
   } finally {
     sending.value = false;
   }
@@ -145,14 +230,15 @@ onMounted(() => {
                       'rounded-md px-3 py-2 text-sm max-w-[80%] whitespace-pre-wrap',
                       m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                     ]">
-                    {{ m.content }}
+                    <span class="inline-flex items-end gap-2 leading-relaxed">
+                      <span class="whitespace-pre-wrap">{{ m.content }}</span>
+                      <Spinner
+                        v-if="m.role === 'assistant' && m.loading"
+                        size="sm"
+                        class="shrink-0 inline-block align-middle"
+                      />
+                    </span>
                     <div class="mt-1 text-[10px] opacity-70">{{ new Date(m.at).toLocaleTimeString() }}</div>
-                  </div>
-                </div>
-                <div v-if="sending" class="flex justify-start">
-                  <div class="rounded-md bg-muted px-3 py-2 text-sm flex items-center gap-2">
-                    <Spinner size="sm" />
-                    Thinking...
                   </div>
                 </div>
               </div>

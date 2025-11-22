@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import dotenv
-import os
 import contextlib
+import json
+import os
 
-from typing import Any
-
+import dotenv
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+from lib.interrogation import stream_interrogation
 from lib.mcp_state import MCPState
 
 from lib.payloads import *
@@ -52,12 +53,25 @@ async def ping() -> dict[str, Any]:
     return await mcp_state.call_tool("ping", {})
 
 @app.post("/query", tags=["Query"])
-async def query(payload: QueryPayload) -> dict[str, Any]:
+async def query(payload: QueryPayload):
     """
-    Query a document by its ID with a specific question.
+    Query a document by its ID with a specific question, streaming tokens as they arrive.
     """
 
-    return await mcp_state.call_tool("query", {"payload": payload.model_dump()})
+    def event_source():
+        try:
+            for event in stream_interrogation(payload):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            error_event = {"type": "error", "message": str(exc)}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+
+    return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)
 
 @app.post("/vectorize", tags=["Vectorize"])
 async def vectorize(payload: VectorizePayload) -> dict[str, Any]:

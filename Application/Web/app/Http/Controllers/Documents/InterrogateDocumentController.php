@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Interrogations\DocumentInterrogationRequest;
 use App\Models\Interrogation;
 use App\Models\Upload;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 use MongoDB\BSON\ObjectId;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InterrogateDocumentController extends Controller
 {
@@ -60,42 +62,137 @@ class InterrogateDocumentController extends Controller
      */
     public function store(DocumentInterrogationRequest $request)
     {
+        $documentId = $request['document_id'];
+
         $payload = [
-            'document_id' => $request['document_id'],
+            'document_id' => $documentId,
             'user_id'     => $this->userId,
             'question'    => $request['query'],
-            'extra'       => null
+            'extra'       => null,
         ];
 
+        // Store user message
         $this->storeDocumentInterrogation([
-            'document_id' => $request['document_id'],
+            'document_id' => $documentId,
             'role'        => 'user',
-            'content'     => $request['query']
+            'content'     => $request['query'],
         ]);
 
-        // make a POST request to the MCP server
-        $response = Http::timeout(120)
-            ->connectTimeout(10)
-            ->post(config('mcp.host') . ':' . config('mcp.port') . config('mcp.query_endpoint'), $payload);
+        // Build MCP URL
+        $mcpUrl = sprintf(
+            '%s:%s%s',
+            config('mcp.host'),
+            config('mcp.port'),
+            config('mcp.query_endpoint')
+        );
 
-        if ($response->failed()) {
+        // Use raw Guzzle to avoid Laravel Http client buffering
+        $client = new Client([
+            'timeout'      => 120,
+            'connect_timeout' => 10,
+            'http_errors'  => false, // don't throw on 4xx/5xx
+        ]);
+
+        try {
+            $response = $client->post($mcpUrl, [
+                'stream'  => true, // IMPORTANT: streaming
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept'       => 'text/event-stream',
+                ],
+                'body'    => json_encode($payload),
+            ]);
+        } catch (\Throwable $e) {
             return response()->json([
-                'error' => 'Failed to communicate with MCP server.',
+                'error'   => 'Failed to communicate with MCP server.',
+                'message' => $e->getMessage(),
             ], 500);
         }
 
-        $data = $response->json();
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            return response()->json([
+                'error'   => 'MCP server returned an error status.',
+                'status'  => $status,
+            ], 500);
+        }
 
-        $this->storeDocumentInterrogation([
-            'document_id' => $request['document_id'],
-            'role'        => 'assistant',
-            'content'     => $data['answer'] ?? ''
-        ]);
+        $bodyStream = $response->getBody();
 
-        return response()->json([
-            'answer' => $data['answer'] ?? '',
+        $streamCallback = function () use ($bodyStream, $documentId) {
+            // Avoid PHP timing out while relaying a long-running SSE stream
+            @set_time_limit(0);
+            @ini_set('max_execution_time', '0');
+            // Disable PHP output buffering and compression so SSE can flush
+            @ini_set('output_buffering', '0');
+            @ini_set('zlib.output_compression', '0');
+            while (ob_get_level() > 0) { @ob_end_flush(); }
+            ob_implicit_flush(true);
+
+            $buffer = '';
+            $answer = '';
+
+            try {
+                echo ": stream start\n\n";
+                @ob_flush();
+                flush();
+
+                while (!$bodyStream->eof()) {
+                    $chunk = $bodyStream->read(1024);
+
+                    if ($chunk === '' || $chunk === false) {
+                        usleep(10000); // 10ms
+                        continue;
+                    }
+
+                    // The MCP endpoint is already sending SSE ("data: {...}\n\n"),
+                    // so we just proxy the raw chunk as-is:
+                    echo $chunk;
+                    @ob_flush();
+                    flush();
+
+                    // If you want to accumulate the semantic answer on the PHP side:
+                    $buffer .= $chunk;
+                    [$buffer, $answer] = $this->consumeStreamBuffer($buffer, $answer);
+                }
+
+                // Flush any leftover buffer through your parser
+                if (trim($buffer) !== '') {
+                    [, $answer] = $this->consumeStreamBuffer($buffer . "\n\n", $answer);
+                }
+
+                // Persist assistant final answer if we have one
+                if (!blank($answer)) {
+                    $this->storeDocumentInterrogation([
+                        'document_id' => $documentId,
+                        'role'        => 'assistant',
+                        'content'     => $answer,
+                    ]);
+                }
+
+                // Send a final SSE event to signal completion to the client
+                echo "data: " . json_encode(['type' => 'done']) . "\n\n";
+                @ob_flush();
+                flush();
+            } catch (\Throwable $e) {
+                $errorEvent = json_encode([
+                    'type'    => 'error',
+                    'message' => 'Stream interrupted: ' . $e->getMessage(),
+                ]);
+                echo "data: {$errorEvent}\n\n";
+                @ob_flush();
+                flush();
+            }
+        };
+
+        return new StreamedResponse($streamCallback, 200, [
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache, no-transform',
+            'X-Accel-Buffering' => 'no',
+            'Connection'        => 'keep-alive',
         ]);
     }
+
 
     private function getDocumentById()
     {
@@ -119,6 +216,10 @@ class InterrogateDocumentController extends Controller
             'created_at'  => now(),
         ];
 
+        if (!blank($this->userId)) {
+            $payload['user_id'] = $this->userId;
+        }
+
         Interrogation::create($payload);
     }
 
@@ -139,5 +240,35 @@ class InterrogateDocumentController extends Controller
         }
 
         return $history;
+    }
+
+    private function consumeStreamBuffer(string $buffer, string $answer): array
+    {
+        while (($pos = strpos($buffer, "\n\n")) !== false) {
+            $rawEvent = substr($buffer, 0, $pos);
+            $buffer = substr($buffer, $pos + 2);
+
+            $line = trim($rawEvent);
+            if (!str_starts_with($line, 'data:')) {
+                continue;
+            }
+
+            $jsonPayload = trim(substr($line, 5));
+            $payload = json_decode($jsonPayload, true);
+
+            if (!is_array($payload)) {
+                continue;
+            }
+
+            $type = $payload['type'] ?? null;
+
+            if ($type === 'chunk' && isset($payload['delta'])) {
+                $answer .= (string) $payload['delta'];
+            } elseif ($type === 'done' && isset($payload['answer'])) {
+                $answer = (string) $payload['answer'];
+            }
+        }
+
+        return [$buffer, $answer];
     }
 }
