@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   clamav:
     image: mkodockx/docker-clamav:alpine
@@ -6,4 +8,7 @@ services:
     ports:
       - "3310:3310"
     volumes:
-      - clamav-db:/var/lib/clamav
+      - clamav-db:/var/lib/clamav 
+
+volumes:
+  clamav-db:
