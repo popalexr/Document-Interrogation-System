@@ -33,7 +33,7 @@ withDefaults(
     <header class="border-b border-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div class="flex items-center gap-3">
-          <span class="inline-flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <span class="inline-flex size-8 items-center justify-center rounded-md text-primary-foreground">
             <AppLogoIcon className="size-5" />
           </span>
           <span class="text-sm font-semibold">InterroDocs</span>
