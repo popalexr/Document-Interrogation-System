@@ -38,21 +38,12 @@ type DocumentInfo = {
   created_at?: string | Date;
 }
 
-const textareaRef = ref(null);
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
 
 const maxRows = 4;
 
 const documentInfo = computed<DocumentInfo | null>(() => (page.props as any).document ?? null);
-
-function formatSize(bytes?: number): string {
-  if (bytes === undefined || bytes === null) return ''
-  const units = ['B','KB','MB','GB']
-  let b = bytes
-  let i = 0
-  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++ }
-  return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string; at: Date | string; loading?: boolean };
 const messages = ref<ChatMessage[]>([]);
@@ -227,6 +218,12 @@ const autoGrow = () => {
   el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
 }
 
+const handleTextareaKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Enter' || event.shiftKey) return;
+  event.preventDefault();
+  sendMessage();
+};
+
 const textAreaInitialSizing = () => {
     const el = textareaRef.value
     if (!el) return
@@ -338,6 +335,7 @@ onMounted(() => {
                                                 placeholder="Ask a question about this document..."
                                                 maxlength="500"
                                                 @input="autoGrow"
+                                                @keydown="handleTextareaKeydown"
                                             ></textarea>
                                             <button
                                                 class="flex h-8 w-8 items-center justify-center text-xs shrink-0 cursor-pointer"
