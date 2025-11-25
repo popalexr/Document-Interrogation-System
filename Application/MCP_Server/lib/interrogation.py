@@ -6,6 +6,7 @@ from lib.openai import OpenAIClient
 from lib.payloads import QueryPayload
 from lib.system_prompts import QUERY_SYS_PROMPT
 from lib.vector_stores import find_vector_store_by_name
+from lib.filecite_sanitizer import FileciteSanitizer
 
 
 def stream_interrogation(payload: QueryPayload) -> Generator[dict, None, None]:
@@ -47,6 +48,7 @@ def stream_interrogation(payload: QueryPayload) -> Generator[dict, None, None]:
         ],
     )
 
+    sanitizer = FileciteSanitizer()
     accumulated = ""
     last_done_text = ""
     final_response = None
@@ -56,16 +58,24 @@ def stream_interrogation(payload: QueryPayload) -> Generator[dict, None, None]:
             if event.type == "response.output_text.delta":
                 delta = getattr(event, "delta", "") or ""
                 if delta:
-                    accumulated += delta
-                    yield {"type": "chunk", "delta": delta}
+                    cleaned = sanitizer.sanitize(delta)
+                    if cleaned:
+                        accumulated += cleaned
+                        yield {"type": "chunk", "delta": cleaned}
+
             elif event.type == "response.output_text.done":
                 last_done_text = getattr(event, "text", "") or last_done_text
 
-        # Ensure we capture the completed response before closing
         final_response = response_stream.get_final_response()
 
+    tail = sanitizer.flush()
+    if tail:
+        accumulated += tail
+        yield {"type": "chunk", "delta": tail}
+
     if not accumulated:
-        accumulated = last_done_text or _extract_text_from_response(final_response)
+        raw_text = last_done_text or _extract_text_from_response(final_response)
+        accumulated = FileciteSanitizer.remove_all(raw_text)
 
     yield {"type": "done", "answer": accumulated}
 
@@ -107,3 +117,8 @@ def _extract_text_from_response(response) -> str:
                     text_parts.append(text)
 
     return "".join(text_parts).strip()
+
+def _remove_filecite(text: str) -> str:
+    if not text:
+        return ""
+    return FileciteSanitizer._pattern.sub("", text)
