@@ -117,8 +117,3 @@ def _extract_text_from_response(response) -> str:
                     text_parts.append(text)
 
     return "".join(text_parts).strip()
-
-def _remove_filecite(text: str) -> str:
-    if not text:
-        return ""
-    return FileciteSanitizer._pattern.sub("", text)

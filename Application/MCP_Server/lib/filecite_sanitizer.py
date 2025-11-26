@@ -1,53 +1,102 @@
-import re
-
-
 class FileciteSanitizer:
     """
-    Elimină secvențele de tip:
+    Remove any content between:
+        U+E200 (start) and U+E201 (end)
 
-    \uE200filecite\uE202turnXfileY...\uE201
+    Works correctly in streaming, even if
+    the sequence is split across multiple chunks.
     """
 
-    # prinde TOT block-ul: start (U+E200), "filecite", separator (U+E202), orice, terminator (U+E201)
-    _pattern = re.compile(r"\uE200filecite\uE202.*?\uE201", re.DOTALL)
+    START_MARK = "\uE200"  # U+E200 character (start of quote sequence)
+    END_MARK = "\uE201"    # U+E201 character (end of quote sequence)
 
     def __init__(self, safety_margin: int = 128):
         self.buffer = ""
         self.safety_margin = safety_margin
+        self._inside_hidden = False  # Checking if we are inside a hidden block (the quote sequence)
+
+    def _process_text(self, text: str) -> str:
+        """
+        Process a chunk of text and remove everything between
+        START_MARK and END_MARK, taking into account the current state
+        (self._inside_hidden).
+        """
+        if not text:
+            return ""
+
+        out_chars = []
+
+        for ch in text:
+            if self._inside_hidden:
+                # The end of the hidden block
+                if ch == self.END_MARK:
+                    self._inside_hidden = False
+
+                continue
+            else:
+                # Outside a hidden block and checking for start
+                if ch == self.START_MARK:
+                    self._inside_hidden = True
+                    continue
+                else:
+                    out_chars.append(ch)
+
+        return "".join(out_chars)
 
     def sanitize(self, chunk: str) -> str:
         """
-        Curăță pentru streaming.
+        Cleaning for streaming.
+        Any text between START_MARK and STOP_MARK will be removed.
         """
         if not chunk:
             return ""
 
         self.buffer += chunk
 
+        # If the buffer is smaller than or equal to the safety margin, we cannot emit anything yet
         if len(self.buffer) <= self.safety_margin:
             return ""
 
-        safe_part = self.buffer[:-self.safety_margin]
-        self.buffer = self.buffer[-self.safety_margin:]
+        # Emit everything except the last `safety_margin` characters
+        emit_upto = len(self.buffer) - self.safety_margin
+        to_process = self.buffer[:emit_upto]
+        self.buffer = self.buffer[emit_upto:]
 
-        return self._pattern.sub("", safe_part)
+        # Process the chunk to emit and return cleaned text
+        return self._process_text(to_process)
 
     def flush(self) -> str:
         """
-        Curăță restul la final.
+        Clean up any remaining text in the buffer at the end of the stream.
         """
         if not self.buffer:
             return ""
 
-        cleaned = self._pattern.sub("", self.buffer)
+        to_process = self.buffer
         self.buffer = ""
-        return cleaned
+        return self._process_text(to_process)
 
     @classmethod
     def remove_all(cls, text: str) -> str:
         """
-        Curăță un text complet.
+        Clean an entire text block by removing all content
+        between START_MARK and END_MARK.
         """
         if not text:
             return ""
-        return cls._pattern.sub("", text)
+
+        inside_hidden = False
+        out_chars = []
+
+        for ch in text:
+            if inside_hidden:
+                if ch == cls.END_MARK:
+                    inside_hidden = False
+                continue
+            else:
+                if ch == cls.START_MARK:
+                    inside_hidden = True
+                    continue
+                out_chars.append(ch)
+
+        return "".join(out_chars)
