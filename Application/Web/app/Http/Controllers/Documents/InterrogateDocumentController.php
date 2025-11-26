@@ -68,7 +68,9 @@ class InterrogateDocumentController extends Controller
             'document_id' => $documentId,
             'user_id'     => $this->userId,
             'question'    => $request['query'],
-            'extra'       => null,
+            'extra'       => [
+                'history' => $this->getAllMessagesForDocument($documentId),
+            ],
         ];
 
         // Store user message
@@ -270,5 +272,23 @@ class InterrogateDocumentController extends Controller
         }
 
         return [$buffer, $answer];
+    }
+
+    private function getAllMessagesForDocument(string $documentId): array
+    {
+        $interrogations = Interrogation::query()
+            ->where('document_id', $documentId)
+            ->orderBy('_id', 'asc')
+            ->get();
+
+        $messages = [];
+        foreach ($interrogations as $interrogation) {
+            $messages[] = [
+                'role'    => $interrogation->role,
+                'content' => $interrogation->content,
+            ];
+        }
+
+        return $messages;
     }
 }

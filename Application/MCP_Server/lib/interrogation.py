@@ -23,6 +23,8 @@ def stream_interrogation(payload: QueryPayload) -> Generator[dict, None, None]:
 
     if vector_store is None:
         raise ValueError("Vector store for this user not found.")
+    
+    chat_history = _get_chat_history(payload)
 
     stream = client.responses.stream(
         model="gpt-5-nano",
@@ -38,12 +40,10 @@ def stream_interrogation(payload: QueryPayload) -> Generator[dict, None, None]:
             }
         ],
         instructions=QUERY_SYS_PROMPT,
-        input=[
+        input= chat_history + [
             {
                 "role": "user",
-                "content": [
-                    {"type": "input_text", "text": payload.question}
-                ],
+                "content": payload.question,
             }
         ],
     )
@@ -117,3 +117,21 @@ def _extract_text_from_response(response) -> str:
                     text_parts.append(text)
 
     return "".join(text_parts).strip()
+
+def _get_chat_history(payload: QueryPayload) -> list[dict]:
+    """
+    Retrieve chat history for the given document and user.
+    """
+
+    chat_history = []
+
+    for message in payload.extra.get("history", []):
+        role = message.get("role")
+        content = message.get("content")
+        if role and content:
+            chat_history.append({
+                "role": role,
+                "content": content
+            })
+    
+    return chat_history
