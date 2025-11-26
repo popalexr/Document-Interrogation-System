@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import { dashboard, login, register } from '@/routes'
+import { login, register } from '@/routes'
+import { home as dashboard } from '@/routes/dashboard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {

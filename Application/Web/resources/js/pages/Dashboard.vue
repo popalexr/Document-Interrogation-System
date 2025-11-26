@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
+import { home as dashboard } from '@/routes/dashboard';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/Icon.vue';

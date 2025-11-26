@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
-import { dashboard } from '@/routes';
+import { home as dashboard } from '@/routes/dashboard';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { ClipboardCheck, Ellipsis, FileText, Paperclip, SendHorizontal } from 'lucide-vue-next';

@@ -21,7 +21,7 @@ class DashboardController extends Controller
     /**
      * Show the dashboard with user's uploads.
      */
-    public function index(): Response
+    public function __invoke(): Response
     {
         $uploads = $this->getUserUploads();
 
