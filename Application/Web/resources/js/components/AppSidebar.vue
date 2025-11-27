@@ -12,6 +12,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { home as dashboard } from '@/routes/dashboard';
+import { index as trash_index } from '@/routes/trash';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { BookOpen, File, Folder, LayoutGrid, Star, Trash } from 'lucide-vue-next';
@@ -45,7 +46,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Trash',
-        href: '#',
+        href: trash_index(),
         icon: Trash,
     }
 ];
