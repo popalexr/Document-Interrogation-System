@@ -41,6 +41,7 @@ class DashboardController extends Controller
 
         return Upload::query()
             ->where('user_id', $this->userId)
+            ->whereNull('deleted_at')
             ->orderByDesc('created_at')
             ->limit(100)
             ->get(['_id', 'original_name', 'mime_type', 'size', 'status', 'r2_key', 'created_at'])

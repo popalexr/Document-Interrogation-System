@@ -2,11 +2,20 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { home as dashboard } from '@/routes/dashboard';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/Icon.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +25,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
-import { MoreHorizontal } from 'lucide-vue-next';
+import { MoreHorizontal, TrashIcon } from 'lucide-vue-next';
 import documents from '@/routes/documents';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -39,6 +48,9 @@ type UploadItem = {
 }
 
 const uploads = computed<UploadItem[]>(() => ((page.props as any).uploads ?? []) as UploadItem[])
+const deleteDialogOpen = ref(false)
+const deletingUpload = ref<UploadItem | null>(null)
+const isDeleting = ref(false)
 
 function formatSize(bytes: number | undefined): string {
   if (!bytes && bytes !== 0) return ''
@@ -80,6 +92,39 @@ function extColor(ext: string): string {
     default:
       return 'bg-muted text-foreground'
   }
+}
+
+function openDeleteDialog(upload: UploadItem) {
+  deletingUpload.value = upload
+  deleteDialogOpen.value = true
+}
+
+function handleDialogOpen(open: boolean) {
+  deleteDialogOpen.value = open
+
+  if (!open) {
+    deletingUpload.value = null
+  }
+}
+
+function confirmDelete() {
+  if (!deletingUpload.value) return
+
+  isDeleting.value = true
+
+  router.post(
+    documents.delete.url({ query: { id: deletingUpload.value._id } }),
+    {},
+    {
+      preserveScroll: true,
+      onFinish: () => {
+        isDeleting.value = false
+      },
+      onSuccess: () => {
+        handleDialogOpen(false)
+      },
+    },
+  )
 }
 </script>
 
@@ -155,7 +200,16 @@ function extColor(ext: string): string {
                                             </DropdownMenuItem>
                                             <DropdownMenuItem>Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
+                                            <DropdownMenuItem class="text-destructive" :as-child="true">
+                                                <button
+                                                    type="button"
+                                                    class="flex w-full items-center"
+                                                    @click="openDeleteDialog(u)"
+                                                >
+                                                    <TrashIcon class="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </button>
+                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -164,6 +218,35 @@ function extColor(ext: string): string {
                     </ul>
                 </CardContent>
             </Card>
+
+            <Dialog :open="deleteDialogOpen" @update:open="handleDialogOpen">
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader class="space-y-2">
+                        <DialogTitle>Delete document</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete
+                            <span class="font-medium text-foreground">
+                                {{ deletingUpload?.original_name }}
+                            </span>
+                            ? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button variant="secondary" @click="handleDialogOpen(false)">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            :disabled="!deletingUpload || isDeleting"
+                            @click="confirmDelete"
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     </AppLayout>
   </template>

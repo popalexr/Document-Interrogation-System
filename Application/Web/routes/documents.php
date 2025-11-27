@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Documents\DeleteDocumentController;
 use App\Http\Controllers\Documents\InterrogateDocumentController;
 use App\Http\Controllers\Upload\UploadController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->prefix('documents')->group(function () {
     Route::get('/interrogate', [InterrogateDocumentController::class, 'index'])
         ->name('documents.interrogate');
+
     Route::post('/interrogate', [InterrogateDocumentController::class, 'store'])
         ->name('documents.interrogate.store');
+    Route::post('/delete', DeleteDocumentController::class)
+        ->name('documents.delete');
 });

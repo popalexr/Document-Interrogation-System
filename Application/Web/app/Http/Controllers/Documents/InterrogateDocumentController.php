@@ -203,6 +203,7 @@ class InterrogateDocumentController extends Controller
             return Upload::query()
                 ->where('_id', $oid)
                 ->where('user_id', $this->userId)
+                ->whereNull('deleted_at')
                 ->first();
         }
 
