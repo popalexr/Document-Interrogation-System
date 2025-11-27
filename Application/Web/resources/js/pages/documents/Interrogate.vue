@@ -6,6 +6,10 @@ import { home as dashboard } from '@/routes/dashboard';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { ClipboardCheck, Ellipsis, FileText, Paperclip, SendHorizontal } from 'lucide-vue-next';
+import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue';
+import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue';
+import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
+import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 
 const page = usePage();
 
@@ -360,10 +364,22 @@ onMounted(() => {
             </div>
             <div class="w-1/7 p-4">
                 <div class="flex items-center justify-between border-b border-gray-200">
-                    <div class="text-md font-bold">Your chats</div>
-                    <button class="p-1 rounded-full hover:bg-gray-100 cursor-pointer">
+                  <div class="text-md font-bold">Your chats</div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <button class="p-1 rounded-full hover:bg-gray-100 cursor-pointer">
                         <Ellipsis />
-                    </button>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem class="cursor-pointer">
+                        New chat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="cursor-pointer">
+                        Clear all chats
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
             </div>
         </div>
