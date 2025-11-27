@@ -27,6 +27,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'uploads' => $uploads,
+            'showUploadButton' => true,
         ]);
     }
 

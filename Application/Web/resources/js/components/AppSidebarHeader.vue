@@ -3,6 +3,8 @@ import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
 import UploadButton from '@/components/UploadButton.vue';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 withDefaults(
     defineProps<{
@@ -12,6 +14,12 @@ withDefaults(
         breadcrumbs: () => [],
     },
 );
+
+const pageProps = usePage().props;
+
+const shouldShowUploadButton = computed(() => {
+    return pageProps.showUploadButton === true;
+});
 </script>
 
 <template>
@@ -24,7 +32,7 @@ withDefaults(
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
         </div>
-        <div class="flex items-center">
+        <div class="flex items-center" v-if="shouldShowUploadButton">
             <UploadButton />
         </div>
     </header>
