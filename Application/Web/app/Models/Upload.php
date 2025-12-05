@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Observers\UploadObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use MongoDB\Laravel\Eloquent\Model as Eloquent;
 use MongoDB\Laravel\Relations\BelongsTo;
 
+#[ObservedBy([UploadObserver::class])]
 class Upload extends Eloquent
 {
     protected $connection = 'mongodb';

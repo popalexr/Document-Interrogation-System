@@ -7,4 +7,5 @@ return [
         'html','htm','tex', // Markup files
         'pptx', // Presentation files
     ],
+    'delete_after_days' => 30, // Number of days after which deleted documents are cleaned up
 ];
