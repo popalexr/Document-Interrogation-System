@@ -81,6 +81,14 @@ async def vectorize(payload: VectorizePayload) -> dict[str, Any]:
 
     return await mcp_state.call_tool("vectorize", {"payload": payload.model_dump()})
 
+@app.delete("/delete_document", tags=["Delete Document"])
+async def delete_document(payload: DeleteDocumentPayload) -> dict[str, Any]:
+    """
+    Delete a document by its ID.
+    """
+
+    return await mcp_state.call_tool("delete_document", {"payload": payload.model_dump()})
+
 if __name__ == "__main__":
     import uvicorn
 

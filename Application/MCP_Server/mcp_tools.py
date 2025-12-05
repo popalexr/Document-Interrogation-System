@@ -67,6 +67,32 @@ def initialize_mcp(mcp_instance):
         )
 
         return {"status": "vectorization_complete", "vector_store_id": vector_store.id, "vector_file_id": uploaded_file.id}
+    
+    @mcp.tool()
+    def delete_document(payload: DeleteDocumentPayload) -> dict:
+        """
+        Delete a document by its ID from the vector store.
+        """
+        client = OpenAIClient().get_client()
+
+        vector_store = find_vector_store_by_name("documents-" + payload.user_id)
+
+        if vector_store is None:
+            return {"status": "no_vector_store_found"}
+
+        files = client.vector_stores.files.list(vector_store.id)
+
+        for file in files.data:
+            if file.metadata.get("document_id") == str(payload.document_id):
+                client.vector_stores.files.delete(
+                    vector_store_id=vector_store.id,
+                    file_id=file.id
+                )
+
+        return {
+            "status": "done",
+        }
+
 
 def __get_document(document_id: str) -> dict:
     """

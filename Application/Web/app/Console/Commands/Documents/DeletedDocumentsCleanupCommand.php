@@ -4,6 +4,7 @@ namespace App\Console\Commands\Documents;
 
 use App\Models\Upload;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class DeletedDocumentsCleanupCommand extends Command
@@ -38,7 +39,7 @@ class DeletedDocumentsCleanupCommand extends Command
 
         foreach ($deletedDocuments as $document) {
             $this->deleteDocumentFromR2($document->r2_key);
-            $this->deleteDocumentFromOpenAI($document->_id);
+            $this->deleteDocumentFromOpenAI((string) $document->_id, (string) $document->user_id);
             $this->deleteDocumentFromCollection($document->_id);
             $this->info("Deleted document: {$document->original_name} (ID: {$document->_id})");
         }
@@ -95,9 +96,15 @@ class DeletedDocumentsCleanupCommand extends Command
      * Delete the specified document from OpenAI vector store.
      * 
      * @param string $documentId
+     * @param string $userId
      */
-    private function deleteDocumentFromOpenAI(string $documentId): void
+    private function deleteDocumentFromOpenAI(string $documentId, string $userId): object
     {
-        // TODO: Implement OpenAI vector store deletion logic here
+        return Http::timeout(120)
+            ->connectTimeout(10)
+            ->delete(config('mcp.host') . ':' . config('mcp.port') . config('mcp.delete_document_endpoint'), [
+                'document_id' => (string) $documentId,
+                'user_id' => $userId,
+            ]);
     }
 }

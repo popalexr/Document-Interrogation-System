@@ -23,3 +23,8 @@ class VectorizePayload(BaseModel):
     document_id: str
     user_id: str
     extra: Optional[Dict[str, Any]] = None
+
+class DeleteDocumentPayload(BaseModel):
+    document_id: str
+    user_id: str
+    extra: Optional[Dict[str, Any]] = None
