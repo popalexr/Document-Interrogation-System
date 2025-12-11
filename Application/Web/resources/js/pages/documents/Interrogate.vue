@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 import { home as dashboard } from '@/routes/dashboard';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
@@ -10,6 +10,7 @@ import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue';
 import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue';
 import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
+import { interrogate } from '@/routes/documents';
 
 const page = usePage();
 
@@ -41,6 +42,12 @@ type DocumentInfo = {
   r2_key: string;
   created_at?: string | Date;
 }
+
+type ChatsList = {
+  chat_id: string;
+  name: string;
+}
+const chatsList = ref<ChatsList[]>(page.props.chats || []);
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
@@ -137,12 +144,22 @@ async function sendMessage() {
         assistantMessage.content += payload.delta;
         assistantMessage.at = new Date();
         scrollToBottom();
-      } else if (payload?.type === 'done') {
+      }
+      else if (payload?.type === 'done') {
         if (typeof payload.answer === 'string') {
           assistantMessage.content = payload.answer;
         }
         assistantMessage.loading = false;
         assistantMessage.at = new Date();
+
+        if (payload.newChat && payload.chatId) {
+          router.visit(interrogate(), {
+            method: 'get',
+            data: { id: documentInfo.value?._id, chat_id: payload.chatId },
+            preserveState: true,
+            replace: true,
+          });
+        }
         scrollToBottom();
       } else if (payload?.type === 'error') {
         assistantMessage.content = payload.message ?? 'Error performing interrogation.';
@@ -241,7 +258,7 @@ const textAreaInitialSizing = () => {
 }
 
 onMounted(() => {
-  messages.value = page.props.chats || [];
+  messages.value = page.props.interrogations || [];
   nextTick(scrollToBottom);
 
   textAreaInitialSizing();
@@ -363,24 +380,34 @@ onMounted(() => {
                 </div>
             </div>
             <div class="w-1/7 p-4">
-                <div class="flex items-center justify-between border-b border-gray-200">
-                  <div class="text-md font-bold">Your chats</div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <button class="p-1 rounded-full hover:bg-gray-100 cursor-pointer">
-                        <Ellipsis />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem class="cursor-pointer">
-                        New chat
-                      </DropdownMenuItem>
-                      <DropdownMenuItem class="cursor-pointer">
-                        Clear all chats
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <div class="flex items-center justify-between border-b border-gray-200">
+                <div class="text-md font-bold">Your chats</div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <button class="p-1 rounded-full hover:bg-gray-100 cursor-pointer">
+                      <Ellipsis />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem class="cursor-pointer">
+                      New chat
+                    </DropdownMenuItem>
+                    <DropdownMenuItem class="cursor-pointer">
+                      Clear all chats
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div class="mt-4 flex flex-col gap-3">
+                <div
+                  v-for="chat in chatsList"
+                  :key="chat.chat_id"
+                  class="p-3 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer"
+                  @click="router.visit(interrogate(), { method: 'get', data: { id: documentInfo?._id, chat_id: chat.chat_id }, preserveState: false, replace: true })"
+                >
+                  {{ chat.name ?? 'Untitled Chat' }}
                 </div>
+              </div>
             </div>
         </div>
     </AppLayout>

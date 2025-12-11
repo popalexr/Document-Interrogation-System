@@ -14,8 +14,9 @@ class DocumentInterrogationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_id' => ['required', 'string'],
-            'query' => ['required', 'string', 'max:5000'],
+            'document_id'   => ['required', 'string'],
+            'query'         => ['required', 'string', 'max:5000'],
+            'chat_id'       => ['nullable', 'string'],
         ];
     }
 }

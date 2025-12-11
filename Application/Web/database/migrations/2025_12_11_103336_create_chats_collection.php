@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Stores all interrogations (Q&A) for a specific chat.
-        Schema::connection('mongodb')->create('interrogations', function (Blueprint $collection) {
+        // Stores all chats for a specific document (upload)
+        Schema::connection('mongodb')->create('chats', function (Blueprint $collection) {
             // Indexes for common query patterns
-            $collection->index('chat_id');       // owner / initiator of the interrogation
+            $collection->index('upload_id');     // optional: legacy/aggregate style
+            $collection->index('document_id');   // per-message style (string/ObjectId of Upload)
+            $collection->index('user_id');       // owner / initiator of the chat
             $collection->index('created_at');
             $collection->index('updated_at');
 
@@ -28,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('mongodb')->drop('interrogations');
+        Schema::connection('mongodb')->drop('chats');
     }
 };

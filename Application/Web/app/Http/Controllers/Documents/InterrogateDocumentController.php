@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Documents;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interrogations\DocumentInterrogationRequest;
+use App\Models\Chat;
 use App\Models\Interrogation;
 use App\Models\Upload;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 use MongoDB\BSON\ObjectId;
@@ -18,11 +18,13 @@ class InterrogateDocumentController extends Controller
 {
     private $userId;
     private $documentId;
+    private $chatId;
 
     public function __construct(private Request $request)
     {
         $this->userId = optional($request->user())->getKey();
         $this->documentId = (string) $request->query('id', null);
+        $this->chatId = (string) $request->query('chat_id', null);
     }
 
     /**
@@ -50,11 +52,17 @@ class InterrogateDocumentController extends Controller
             'created_at' => $upload->created_at,
         ];
 
-        $chats = $this->getHistoryQuery((string) $document['_id']);
+        if (blank($this->chatId)) {
+            $interrogations = [];
+        }
+        else {
+            $interrogations = $this->getHistoryQuery((string) $this->chatId);
+        }
 
         return Inertia::render('documents/Interrogate', [
-            'document' => $document,
-            'chats'    => $chats,
+            'document'          => $document,
+            'interrogations'    => $interrogations,
+            'chats'             => $this->getChatsList($this->documentId),
         ]);
     }
     /**
@@ -63,19 +71,26 @@ class InterrogateDocumentController extends Controller
     public function store(DocumentInterrogationRequest $request)
     {
         $documentId = $request['document_id'];
+        $chatId = $request['chat_id'] ?? null;
+        $newChat = false;
+
+        if (blank($chatId)) {
+            $chatId = $this->createNewChat($documentId);
+            $newChat = true;
+        }
 
         $payload = [
             'document_id' => $documentId,
             'user_id'     => $this->userId,
             'question'    => $request['query'],
             'extra'       => [
-                'history' => $this->getAllMessagesForDocument($documentId),
+                'history' => $this->getHistoryQuery($chatId),
             ],
         ];
 
         // Store user message
         $this->storeDocumentInterrogation([
-            'document_id' => $documentId,
+            'chat_id' => $chatId,
             'role'        => 'user',
             'content'     => $request['query'],
         ]);
@@ -121,7 +136,7 @@ class InterrogateDocumentController extends Controller
 
         $bodyStream = $response->getBody();
 
-        $streamCallback = function () use ($bodyStream, $documentId) {
+        $streamCallback = function () use ($bodyStream, $chatId, $newChat) {
             // Avoid PHP timing out while relaying a long-running SSE stream
             @set_time_limit(0);
             @ini_set('max_execution_time', '0');
@@ -153,7 +168,6 @@ class InterrogateDocumentController extends Controller
                     @ob_flush();
                     flush();
 
-                    // If you want to accumulate the semantic answer on the PHP side:
                     $buffer .= $chunk;
                     [$buffer, $answer] = $this->consumeStreamBuffer($buffer, $answer);
                 }
@@ -166,14 +180,15 @@ class InterrogateDocumentController extends Controller
                 // Persist assistant final answer if we have one
                 if (!blank($answer)) {
                     $this->storeDocumentInterrogation([
-                        'document_id' => $documentId,
+                        'chat_id'     => $chatId,
                         'role'        => 'assistant',
                         'content'     => $answer,
                     ]);
                 }
 
                 // Send a final SSE event to signal completion to the client
-                echo "data: " . json_encode(['type' => 'done']) . "\n\n";
+                echo "data: " . json_encode(['type' => 'done', 'newChat' => $newChat, 'chatId' => $chatId]) . "\n\n";
+                
                 @ob_flush();
                 flush();
             } catch (\Throwable $e) {
@@ -213,7 +228,7 @@ class InterrogateDocumentController extends Controller
     private function storeDocumentInterrogation(array $data): void
     {
         $payload = [
-            'document_id' => $data['document_id'],
+            'chat_id'     => $data['chat_id'],
             'role'        => $data['role'] ?? 'user',
             'content'     => $data['content'],
             'created_at'  => now(),
@@ -226,10 +241,10 @@ class InterrogateDocumentController extends Controller
         Interrogation::create($payload);
     }
 
-    private function getHistoryQuery(string $documentId): array
+    private function getHistoryQuery(string $chatId): array
     {
         $interrogations = Interrogation::query()
-            ->where('document_id', $documentId)
+            ->where('chat_id', $chatId)
             ->orderBy('_id', 'asc')
             ->get();
 
@@ -275,21 +290,33 @@ class InterrogateDocumentController extends Controller
         return [$buffer, $answer];
     }
 
-    private function getAllMessagesForDocument(string $documentId): array
+    private function createNewChat(string $documentId): string
     {
-        $interrogations = Interrogation::query()
+        $chat = Chat::create([
+            'document_id' => $documentId,
+            'user_id'     => $this->userId,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        return (string) $chat->_id;
+    }
+
+    private function getChatsList(string $documentId): array
+    {
+        $chats = Chat::query()
             ->where('document_id', $documentId)
-            ->orderBy('_id', 'asc')
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        $messages = [];
-        foreach ($interrogations as $interrogation) {
-            $messages[] = [
-                'role'    => $interrogation->role,
-                'content' => $interrogation->content,
+        $chatsList = [];
+        foreach ($chats as $chat) {
+            $chatsList[] = [
+                'chat_id' => (string) $chat->_id,
+                'name'    => $chat->name ?? null,
             ];
         }
 
-        return $messages;
+        return $chatsList;
     }
 }
