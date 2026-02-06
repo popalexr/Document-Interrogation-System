@@ -150,6 +150,8 @@ function extColor(ext: string): string {
 
       <DocxPreview v-else-if="kind === 'docx'" :url="fileUrl" />
 
+      <DocPreview v-else-if="kind === 'doc'" :url="fileUrl" />
+
       <PptxPreview v-else-if="kind === 'pptx'" :pptx-url="fileUrl" :file-name="fileName" />
 
       <div
