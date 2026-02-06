@@ -11,6 +11,7 @@ import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigg
 import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 import { interrogate } from '@/routes/documents';
+import { view as viewDocument } from '@/routes/documents';
 
 const page = usePage();
 
@@ -25,7 +26,7 @@ let breadcrumbs: BreadcrumbItem[] = [
   },
   {
     title: page.props.document.original_name,
-    href: '#',
+    href: viewDocument.url({ query: { id: page.props.document._id } }),
   },
   {
     title: 'Interrogate Document',

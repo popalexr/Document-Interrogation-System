@@ -1,0 +1,24 @@
+<script setup lang="ts">
+import { onMounted, ref, watch, computed } from "vue";
+import MarkdownIt from "markdown-it";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const props = defineProps<{ url: string }>();
+const raw = ref("");
+
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
+const html = computed(() => md.render(raw.value));
+
+async function load() {
+  const res = await fetch(props.url);
+  raw.value = await res.text();
+}
+onMounted(load);
+watch(() => props.url, load);
+</script>
+
+<template>
+  <ScrollArea class="h-[70vh] rounded-xl border bg-background">
+    <div class="prose prose-sm max-w-none p-4 dark:prose-invert" v-html="html" />
+  </ScrollArea>
+</template>

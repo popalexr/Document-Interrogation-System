@@ -185,7 +185,16 @@ function confirmDelete() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" class="w-40">
-                                            <DropdownMenuItem>View</DropdownMenuItem>
+                                            <DropdownMenuItem :as-child="true">
+                                                <Link
+                                                    as="button"
+                                                    class="block w-full cursor-pointer text-left"
+                                                    :href="documents.view.url({ query: { id: u._id } })"
+                                                    prefetch
+                                                >
+                                                    View
+                                                </Link>
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem>Download</DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem :as-child="true">
