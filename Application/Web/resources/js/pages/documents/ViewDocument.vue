@@ -3,9 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 import { home as dashboard } from '@/routes/dashboard';
-import documents from '@/routes/documents';
 import FilePreview from '@/components/FilePreview.vue';
-import { onBeforeMount, onMounted } from 'vue';
 import api from '@/routes/api';
 
 const page = usePage();
@@ -26,7 +24,7 @@ let breadcrumbs: BreadcrumbItem[] = [
 ];
 
 let selected = {
-  url: api.viewFile.url({ query: { id: page.props.document._id } }),
+  url: new URL(api.viewFile.url({ query: { id: page.props.document._id } }), window.location.origin).toString(),
   name: page.props.document.original_name,
 };
 </script>
