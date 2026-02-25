@@ -73,6 +73,37 @@ async def query(payload: QueryPayload):
 
     return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)
 
+@app.post("/edit", tags=["Edit"])
+async def edit(payload: EditPayload) -> dict[str, Any]:
+    """
+    Edit a document by its ID with new content.
+    """
+
+    async def event_source():
+        try:
+            edit_prompt = await mcp_state.call_tool("edit_prompt", {"payload": payload.model_dump()})
+            yield f"data: {json.dumps({'type': 'edit_prompt', 'prompt': edit_prompt})}\n\n"
+
+            edit_payload = EditPayload(
+                document_id=payload.document_id,
+                user_id=payload.user_id,
+                prompt=edit_prompt["prompt"],
+            )
+
+            edit_code = await mcp_state.call_tool("edit_code", {"payload": edit_payload.model_dump()})
+            yield f"data: {json.dumps({'type': 'edit_code', 'code': edit_code})}\n\n"
+
+        except Exception as exc:
+            error_event = {"type": "error", "message": str(exc)}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+
+    return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)
+
 @app.post("/vectorize", tags=["Vectorize"])
 async def vectorize(payload: VectorizePayload) -> dict[str, Any]:
     """

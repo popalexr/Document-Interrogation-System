@@ -9,8 +9,9 @@ class QueryPayload(BaseModel):
 
 
 class EditPayload(BaseModel):
-    document_id: Optional[str] = None
-    ops: Optional[list] = None
+    document_id: str
+    user_id: str
+    prompt: str
     extra: Optional[Dict[str, Any]] = None
 
 

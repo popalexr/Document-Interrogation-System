@@ -6,6 +6,7 @@ from lib.openai import OpenAIClient
 from lib.r2_storage import get_r2_stream
 from lib.mongo import MongoDBClient
 from lib.interrogation import collect_interrogation_answer
+from lib.edit_file import generate_editing_prompt, generate_editing_code
 
 mcp = None
 
@@ -30,7 +31,29 @@ def initialize_mcp(mcp_instance):
 
         answer = collect_interrogation_answer(payload)
         return {"answer": answer}
+
+    @mcp.tool()
+    def edit_prompt(payload: EditPayload) -> dict:
+        """
+        Generate an editing prompt based on the user's instructions.
+        Payload must contain 'document_id', 'user_id' and 'prompt' keys.
+        """
+
+        edit_prompt = generate_editing_prompt(payload)
+
+        return edit_prompt
     
+    @mcp.tool()
+    def edit_code(payload: EditPayload) -> dict:
+        """
+        Generate editing code based on the user's instructions.
+        Payload must contain 'document_id', 'user_id' and 'prompt' keys.
+        """
+
+        editing_code = generate_editing_code(payload)
+
+        return editing_code
+
     @mcp.tool()
     def vectorize(payload: VectorizePayload) -> dict:
         """
