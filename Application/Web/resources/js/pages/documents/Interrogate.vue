@@ -53,6 +53,8 @@ const chatsList = ref<ChatsList[]>(page.props.chats || []);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
 
+let chatId = page.props.chat_id as string | null;
+
 const maxRows = 4;
 
 const documentInfo = computed<DocumentInfo | null>(() => (page.props as any).document ?? null);
@@ -107,6 +109,7 @@ async function sendMessage() {
         ...(token ? { 'X-CSRF-TOKEN': token } : {}),
       },
       body: JSON.stringify({
+        chat_id: chatId,
         document_id: did,
         query: text,
       }),
@@ -160,6 +163,8 @@ async function sendMessage() {
             preserveState: true,
             replace: true,
           });
+
+          chatId = payload.chatId;
         }
         scrollToBottom();
       } else if (payload?.type === 'error') {

@@ -119,7 +119,7 @@ function extColor(ext: string): string {
                           <Link
                               as="button"
                               class="block w-full cursor-pointer text-left"
-                              href="#"
+                              :href="documents.interrogate.url({ query: { id: fileId } })"
                               prefetch
                           >
                               Interrogate

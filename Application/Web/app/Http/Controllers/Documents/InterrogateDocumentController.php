@@ -63,6 +63,7 @@ class InterrogateDocumentController extends Controller
             'document'          => $document,
             'interrogations'    => $interrogations,
             'chats'             => $this->getChatsList($this->documentId),
+            'chat_id'           => $this->chatId ?? null,
         ]);
     }
     /**
