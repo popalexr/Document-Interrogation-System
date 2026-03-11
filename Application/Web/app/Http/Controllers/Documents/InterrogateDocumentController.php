@@ -314,7 +314,7 @@ class InterrogateDocumentController extends Controller
         foreach ($chats as $chat) {
             $chatsList[] = [
                 'chat_id' => (string) $chat->_id,
-                'name'    => $chat->name ?? null,
+                'title'   => $chat->title ?? null,
             ];
         }
 

@@ -104,6 +104,14 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
 
     return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)
 
+@app.post("/generate_title", tags=["Generate Title"])
+async def generate_title(payload: NameChatPayload) -> dict[str, Any]:
+    """
+    Generate a title for a chat based on the user's ID, the document ID and the query.
+    """
+
+    return await mcp_state.call_tool("name_chat", {"payload": payload.model_dump()})
+
 @app.post("/vectorize", tags=["Vectorize"])
 async def vectorize(payload: VectorizePayload) -> dict[str, Any]:
     """

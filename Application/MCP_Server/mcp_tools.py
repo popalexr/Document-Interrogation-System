@@ -7,6 +7,7 @@ from lib.r2_storage import get_r2_stream
 from lib.mongo import MongoDBClient
 from lib.interrogation import collect_interrogation_answer
 from lib.edit_file import generate_editing_prompt, generate_editing_code
+from lib.title_generation import generate_chat_title
 
 mcp = None
 
@@ -53,6 +54,16 @@ def initialize_mcp(mcp_instance):
         editing_code = generate_editing_code(payload)
 
         return editing_code
+    
+    @mcp.tool()
+    def name_chat(payload: NameChatPayload) -> dict:
+        """
+        Generate a name for a chat based on the user's ID, the document ID and the query.
+        Payload must contain 'query' key.
+        """
+        title = generate_chat_title(payload)
+
+        return {"title": title}
 
     @mcp.tool()
     def vectorize(payload: VectorizePayload) -> dict:

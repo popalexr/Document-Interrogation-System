@@ -19,6 +19,7 @@ class Chat extends Eloquent
         'document_id',   // string/ObjectId of the related Upload
         'user_id',       // optional owner/initiator
         'upload_id',
+        'title',         // generated title for the chat
     ];
 
     protected $casts = [

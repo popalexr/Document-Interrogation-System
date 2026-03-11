@@ -12,10 +12,11 @@ import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuConte
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 import { interrogate } from '@/routes/documents';
 import { view as viewDocument } from '@/routes/documents';
+import { csrfToken } from '@/lib/utils';
 
 const page = usePage();
 
-let breadcrumbs: BreadcrumbItem[] = [
+let breadcrumbs = ref<BreadcrumbItem[]>([
   {
     title: 'Dashboard',
     href: dashboard().url
@@ -30,9 +31,9 @@ let breadcrumbs: BreadcrumbItem[] = [
   },
   {
     title: 'Interrogate Document',
-    href: '',
+    href: interrogate.url({ query: { id: page.props.document._id } }),
   },
-];
+]);
 
 type DocumentInfo = {
   _id: string;
@@ -46,14 +47,14 @@ type DocumentInfo = {
 
 type ChatsList = {
   chat_id: string;
-  name: string;
+  title: string|null;
 }
 const chatsList = ref<ChatsList[]>(page.props.chats || []);
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
 
-let chatId = page.props.chat_id as string | null;
+let chatId = ref(page.props.chat_id as string | null);
 
 const maxRows = 4;
 
@@ -80,6 +81,51 @@ watch(
     scrollToBottom();
   }
 );
+
+watch(
+  () => chatId.value,
+  (newChatId) => {
+    if (newChatId) {
+      updateBreadcrumbsWithChatTitle(newChatId);
+    }
+  }
+)
+
+const openNewChat = () => {
+  router.visit(interrogate(), {
+    method: 'get',
+    data: { id: documentInfo.value?._id },
+    preserveState: false,
+    replace: true,
+  });
+};
+
+const generateTitle = (prompt: string, chatId: string) => {
+  if (!prompt || !sending.value) return;
+
+  fetch(`/api/generate_title`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': csrfToken() || '',
+    },
+    body: JSON.stringify({ query: prompt, chat_id: chatId }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.title) {
+        chatsList.value = chatsList.value.map(chat => {
+          if (chat.chat_id === chatId) {
+            return { ...chat, title: data.title };
+          }
+          return chat;
+        });
+      }
+    })
+    .catch((err) => {
+      console.error('Error generating title:', err);
+    });
+}
 
 async function sendMessage() {
   const text = input.value.trim();
@@ -109,7 +155,7 @@ async function sendMessage() {
         ...(token ? { 'X-CSRF-TOKEN': token } : {}),
       },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: chatId.value,
         document_id: did,
         query: text,
       }),
@@ -164,7 +210,14 @@ async function sendMessage() {
             replace: true,
           });
 
-          chatId = payload.chatId;
+          chatId.value = payload.chatId;
+
+          chatsList.value.unshift({
+            chat_id: payload.chatId,
+            title: null,
+          });
+
+          generateTitle(text, payload.chatId);
         }
         scrollToBottom();
       } else if (payload?.type === 'error') {
@@ -263,11 +316,31 @@ const textAreaInitialSizing = () => {
     autoGrow()
 }
 
+const updateBreadcrumbsWithChatTitle = (chatId: string|null) => {
+  const chat = chatsList.value.find(c => c.chat_id === chatId);
+  if (chat && chat.title) {
+    breadcrumbs.value = [
+      ...breadcrumbs.value.slice(0, 4),
+      {
+        title: chat.title,
+        href: '#',
+      },
+    ];
+  }
+  else {
+    breadcrumbs.value = [
+      ...breadcrumbs.value.slice(0, 4)
+    ];
+  }
+};
+
 onMounted(() => {
   messages.value = page.props.interrogations || [];
   nextTick(scrollToBottom);
 
   textAreaInitialSizing();
+
+  updateBreadcrumbsWithChatTitle(chatId.value);
 });
 </script>
 
@@ -395,7 +468,7 @@ onMounted(() => {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem class="cursor-pointer">
+                    <DropdownMenuItem class="cursor-pointer" @click="openNewChat">
                       New chat
                     </DropdownMenuItem>
                     <DropdownMenuItem class="cursor-pointer">
@@ -408,10 +481,10 @@ onMounted(() => {
                 <div
                   v-for="chat in chatsList"
                   :key="chat.chat_id"
-                  class="p-3 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer"
+                  class="p-3 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer truncate"
                   @click="router.visit(interrogate(), { method: 'get', data: { id: documentInfo?._id, chat_id: chat.chat_id }, preserveState: false, replace: true })"
                 >
-                  {{ chat.name ?? 'Untitled Chat' }}
+                  {{ chat.title ?? 'Untitled Chat' }}
                 </div>
               </div>
             </div>

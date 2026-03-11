@@ -15,6 +15,11 @@ class EditPayload(BaseModel):
     extra: Optional[Dict[str, Any]] = None
 
 
+class NameChatPayload(BaseModel):
+    query: str
+    extra: Optional[Dict[str, Any]] = None
+
+
 class GenericPayload(BaseModel):
     action: str
     data: Optional[Dict[str, Any]] = None
