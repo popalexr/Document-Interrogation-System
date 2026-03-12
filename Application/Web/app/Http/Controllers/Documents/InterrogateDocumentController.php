@@ -30,7 +30,7 @@ class InterrogateDocumentController extends Controller
     /**
      * GET: Show the document interrogation view.
      */
-    public function index(): Response
+    public function index()
     {
         if (blank($this->documentId) || blank($this->userId)) {
             abort(404);
@@ -40,6 +40,10 @@ class InterrogateDocumentController extends Controller
 
         if (blank($upload)) {
             abort(404);
+        }
+
+        if (!blank($this->chatId) && !$this->existsChat($this->chatId)) {
+            return redirect()->route('documents.interrogate', ['id' => $this->documentId]);
         }
 
         $document = [
@@ -259,6 +263,13 @@ class InterrogateDocumentController extends Controller
         }
 
         return $history;
+    }
+
+    private function existsChat(string $chatId): bool
+    {
+        return Chat::query()
+            ->where('_id', $chatId)
+            ->exists();
     }
 
     private function consumeStreamBuffer(string $buffer, string $answer): array

@@ -5,14 +5,23 @@ import { type BreadcrumbItem } from '@/types';
 import { home as dashboard } from '@/routes/dashboard';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
-import { ClipboardCheck, Ellipsis, FileText, Paperclip, SendHorizontal } from 'lucide-vue-next';
+import { ClipboardCheck, Ellipsis, FileText, Paperclip, SendHorizontal, Trash } from 'lucide-vue-next';
 import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue';
 import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue';
 import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 import { interrogate } from '@/routes/documents';
 import { view as viewDocument } from '@/routes/documents';
+import { deleteMethod as deleteChatRoute } from '@/routes/chats';
 import { csrfToken } from '@/lib/utils';
+import Dialog from '@/components/ui/dialog/Dialog.vue';
+import DialogContent from '@/components/ui/dialog/DialogContent.vue';
+import DialogHeader from '@/components/ui/dialog/DialogHeader.vue';
+import DialogTitle from '@/components/ui/dialog/DialogTitle.vue';
+import DialogDescription from '@/components/ui/dialog/DialogDescription.vue';
+import DialogClose from '@/components/ui/dialog/DialogClose.vue';
+import Button from '@/components/ui/button/Button.vue';
+import DialogFooter from '@/components/ui/dialog/DialogFooter.vue';
 
 const page = usePage();
 
@@ -65,6 +74,10 @@ const messages = ref<ChatMessage[]>([]);
 const input = ref('');
 const sending = ref(false);
 const chatContainer = ref<HTMLElement | null>(null);
+
+const deleteDialogOpen = ref(false);
+const deletingChat = ref<ChatsList | null>(null);
+const isDeleting = ref(false);
 
 const scrollToBottom = () => {
   const el = chatContainer.value;
@@ -334,6 +347,39 @@ const updateBreadcrumbsWithChatTitle = (chatId: string|null) => {
   }
 };
 
+const deleteChat = (chatId: string) => {
+  deletingChat.value = chatsList.value.find(c => c.chat_id === chatId) ?? null;
+  deleteDialogOpen.value = true;
+};
+
+const handleDialogOpen = (open: boolean) => {
+  deleteDialogOpen.value = open;
+
+  if (!open) {
+    deletingChat.value = null;
+  }
+}
+
+const confirmDelete = async () => {
+  if (!deletingChat.value) return;
+
+  router.post(deleteChatRoute.url({
+    query: { chat_id: deletingChat.value.chat_id },
+  }), {}, {
+    preserveScroll: true,
+    onSuccess: () => {
+      chatsList.value = chatsList.value.filter(c => c.chat_id !== deletingChat.value?.chat_id);
+      if (chatId.value === deletingChat.value?.chat_id) {
+        openNewChat();
+      }
+    },
+    onFinish: () => {
+      isDeleting.value = false;
+      handleDialogOpen(false);
+    }
+  });
+};
+
 onMounted(() => {
   messages.value = page.props.interrogations || [];
   nextTick(scrollToBottom);
@@ -348,7 +394,7 @@ onMounted(() => {
     <Head title="Interrogate Document" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex layout-content-height w-full">
-            <div class="w-6/7 px-10 border-r border-gray-200">
+            <div class="w-[78.571429%] lg:w-6/7 px-2 lg:px-10 border-r border-gray-200"> <!-- 5.5/7 = 78.571429% -->
                 <div class="flex flex-col h-full w-full">
                     <div class="h-4/5 w-full">
                         <template v-if="messages.length === 0">
@@ -458,7 +504,7 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <div class="w-1/7 p-4">
+            <div class="w-[21.428571%] lg:w-1/7 p-2"> <!-- 1.5/7 = 21.428571% -->
               <div class="flex items-center justify-between border-b border-gray-200">
                 <div class="text-md font-bold">Your chats</div>
                 <DropdownMenu>
@@ -481,13 +527,64 @@ onMounted(() => {
                 <div
                   v-for="chat in chatsList"
                   :key="chat.chat_id"
-                  class="p-3 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer truncate"
-                  @click="router.visit(interrogate(), { method: 'get', data: { id: documentInfo?._id, chat_id: chat.chat_id }, preserveState: false, replace: true })"
+                  class="flex gap-2 justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer"
                 >
-                  {{ chat.title ?? 'Untitled Chat' }}
+                  <div
+                    class="truncate"
+                    @click="router.visit(interrogate(), { method: 'get', data: { id: documentInfo?._id, chat_id: chat.chat_id }, preserveState: false, replace: true })"
+                  >
+                    {{ chat.title ?? 'Untitled Chat' }}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <button class="p-1 rounded hover:bg-gray-100 cursor-pointer">
+                        <Ellipsis size="16" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        class="cursor-pointer"
+                        @click="deleteChat(chat.chat_id)"
+                      >
+                        <div class="flex items-center gap-1 w-full">
+                          <Trash size="16" class="mr-2 text-red-500" />
+                         <p class="text-red-500">Delete</p>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
         </div>
+
+        <Dialog :open="deleteDialogOpen" @update:open="handleDialogOpen">
+          <DialogContent class="sm:max-w-md">
+              <DialogHeader class="space-y-2">
+                  <DialogTitle>Delete chat</DialogTitle>
+                  <DialogDescription>
+                      Are you sure you want to delete
+                      <span class="font-medium text-foreground">
+                          {{ deletingChat?.title ?? 'this chat' }}
+                      </span>
+                      ? This action cannot be undone.
+                  </DialogDescription>
+              </DialogHeader>
+              <DialogFooter class="gap-2">
+                  <DialogClose as-child>
+                      <Button variant="secondary" @click="handleDialogOpen(false)">
+                          Cancel
+                      </Button>
+                  </DialogClose>
+                  <Button
+                      variant="destructive"
+                      :disabled="!deletingChat || isDeleting"
+                      @click="confirmDelete"
+                  >
+                      Delete
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+          </Dialog>
     </AppLayout>
 </template>
