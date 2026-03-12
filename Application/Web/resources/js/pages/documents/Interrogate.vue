@@ -12,7 +12,7 @@ import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuConte
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 import { interrogate } from '@/routes/documents';
 import { view as viewDocument } from '@/routes/documents';
-import { deleteMethod as deleteChatRoute } from '@/routes/chats';
+import { deleteMethod as deleteChatRoute, deleteAll as deleteAllChatsRoute } from '@/routes/chats';
 import { csrfToken } from '@/lib/utils';
 import Dialog from '@/components/ui/dialog/Dialog.vue';
 import DialogContent from '@/components/ui/dialog/DialogContent.vue';
@@ -78,6 +78,8 @@ const chatContainer = ref<HTMLElement | null>(null);
 const deleteDialogOpen = ref(false);
 const deletingChat = ref<ChatsList | null>(null);
 const isDeleting = ref(false);
+const deleteAllChatsDialogOpen = ref(false);
+const isDeletingAllChats = ref(false);
 
 const scrollToBottom = () => {
   const el = chatContainer.value;
@@ -380,6 +382,32 @@ const confirmDelete = async () => {
   });
 };
 
+const deleteAllChats = () => {
+  deleteAllChatsDialogOpen.value = true;
+};
+
+const handleDeleteAllChatsDialogOpen = (open: boolean) => {
+  deleteAllChatsDialogOpen.value = open;
+}
+
+const confirmDeleteAllChats = async () => {
+  if (chatsList.value.length === 0) return;
+
+  router.post(deleteAllChatsRoute.url(), {
+    document_id: documentInfo.value?._id,
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      chatsList.value = [];
+      openNewChat();
+    },
+    onFinish: () => {
+      isDeletingAllChats.value = false;
+      handleDeleteAllChatsDialogOpen(false);
+    }
+  });
+};
+
 onMounted(() => {
   messages.value = page.props.interrogations || [];
   nextTick(scrollToBottom);
@@ -517,7 +545,7 @@ onMounted(() => {
                     <DropdownMenuItem class="cursor-pointer" @click="openNewChat">
                       New chat
                     </DropdownMenuItem>
-                    <DropdownMenuItem class="cursor-pointer">
+                    <DropdownMenuItem class="cursor-pointer" @click="deleteAllChats">
                       Clear all chats
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -584,7 +612,32 @@ onMounted(() => {
                       Delete
                   </Button>
               </DialogFooter>
-          </DialogContent>
+            </DialogContent>
           </Dialog>
+
+          <Dialog :open="deleteAllChatsDialogOpen" @update:open="handleDeleteAllChatsDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Delete all chats</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete all chats for this document? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2">
+                    <DialogClose as-child>
+                        <Button variant="secondary" @click="handleDeleteAllChatsDialogOpen(false)">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        variant="destructive"
+                        :disabled="isDeletingAllChats"
+                        @click="confirmDeleteAllChats"
+                    >
+                        Delete
+                    </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
     </AppLayout>
 </template>

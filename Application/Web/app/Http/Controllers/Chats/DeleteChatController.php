@@ -12,6 +12,6 @@ class DeleteChatController extends Controller
     {
         Chat::find($request['chat_id'])?->delete();
 
-        return redirect()->back();
+        return redirect()->back()->with("success", "Chat has been deleted.");
     }
 }
