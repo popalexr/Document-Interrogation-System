@@ -5,3 +5,4 @@ fastapi==0.121.1
 uvicorn==0.38.0
 pymongo==4.15.4
 boto3==1.40.73
+docker==7.1.0

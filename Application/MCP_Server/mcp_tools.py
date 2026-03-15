@@ -6,7 +6,7 @@ from lib.openai import OpenAIClient
 from lib.r2_storage import get_r2_stream
 from lib.mongo import MongoDBClient
 from lib.interrogation import collect_interrogation_answer
-from lib.edit_file import generate_editing_prompt, generate_editing_code
+from lib.edit_file import generate_editing_prompt, generate_editing_code, execute_code_in_docker
 from lib.title_generation import generate_chat_title
 
 mcp = None
@@ -54,6 +54,32 @@ def initialize_mcp(mcp_instance):
         editing_code = generate_editing_code(payload)
 
         return editing_code
+    
+    @mcp.tool()
+    def execute_code(payload: dict) -> dict:
+        """
+        Execute the generated code in a Docker container and return the output.
+        Payload keys: "code": str, "requirements": str, "output_file": str, "file_id": str
+        """
+
+        document = __get_document(payload["document_id"])
+        stream = get_r2_stream(document["r2_key"])
+
+        file_bytes = stream.read()
+        stream.close()
+
+        code_payload = {
+            "code": payload["code"],
+            "requirements": payload["requirements"],
+            "file": file_bytes,
+            "filename": document["original_name"],
+            "output_file": payload["output_file"],
+            "packages": payload["packages"],
+        }
+
+        output = execute_code_in_docker(code_payload)
+
+        return {"output": output}
     
     @mcp.tool()
     def name_chat(payload: NameChatPayload) -> dict:

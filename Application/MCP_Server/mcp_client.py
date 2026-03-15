@@ -82,7 +82,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
     async def event_source():
         try:
             edit_prompt = await mcp_state.call_tool("edit_prompt", {"payload": payload.model_dump()})
-            yield f"data: {json.dumps({'type': 'edit_prompt', 'prompt': edit_prompt})}\n\n"
+            yield f"data: {json.dumps({'type': 'edit_prompt', 'message': edit_prompt})}\n\n"
 
             edit_payload = EditPayload(
                 document_id=payload.document_id,
@@ -91,7 +91,18 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
             )
 
             edit_code = await mcp_state.call_tool("edit_code", {"payload": edit_payload.model_dump()})
-            yield f"data: {json.dumps({'type': 'edit_code', 'code': edit_code})}\n\n"
+            yield f"data: {json.dumps({'type': 'edit_code', 'message': edit_code})}\n\n"
+
+            edit_payload = {
+                "code": edit_code["code"],
+                "requirements": edit_code["requirements"],
+                "document_id": payload.document_id,
+                "output_file": edit_code["output_file"],
+                "packages": edit_code["packages"],
+            }
+
+            execution_result = await mcp_state.call_tool("execute_code", {"payload": edit_payload})
+            yield f"data: {json.dumps({'type': 'execution_result', 'message': execution_result})}\n\n"
 
         except Exception as exc:
             error_event = {"type": "error", "message": str(exc)}
