@@ -1,21 +1,24 @@
 from datetime import datetime
 
-from bson import ObjectId
-
 from lib.payloads import *
 from lib.vector_stores import *
 from lib.openai import OpenAIClient
 from lib.r2_storage import get_r2_stream, save_to_r2
-from lib.mongo import MongoDBClient
 from lib.interrogation import collect_interrogation_answer
 from lib.edit_file import generate_editing_prompt, generate_editing_code, execute_code_in_docker
 from lib.title_generation import generate_chat_title
+
+from lib.documents import uploads, edits
 
 mcp = None
 
 def initialize_mcp(mcp_instance):
     global mcp
     mcp = mcp_instance
+
+    # Initialize document models
+    uploads.init()
+    edits.init()
 
     @mcp.tool()
     def ping(payload: dict | None = None) -> dict:
@@ -64,7 +67,7 @@ def initialize_mcp(mcp_instance):
         Payload must contain 'code', 'requirements', 'document_id', 'output_file', 'packages', and 'user_id' keys.
         """
 
-        document = __get_document(payload["document_id"])
+        document = uploads.get_document(payload["document_id"])
         stream = get_r2_stream(document["r2_key"])
 
         file_bytes = stream.read()
@@ -84,7 +87,7 @@ def initialize_mcp(mcp_instance):
         file_name = "edited_" + datetime.utcnow().isoformat() + "_" + document["original_name"]
         new_key = save_to_r2(output, file_name)
 
-        document_id = __store_document(payload["user_id"], file_name, new_key)
+        document_id = edits.store_document(payload["user_id"], file_name, new_key)
 
         return {"document_id": document_id}
 
@@ -105,7 +108,7 @@ def initialize_mcp(mcp_instance):
         Payload must contain 'document_id' key.
         """
 
-        document = __get_document(payload.document_id)
+        document = uploads.get_document(payload.document_id)
         document_path = document["r2_key"]
 
         stream = get_r2_stream(document_path)
@@ -159,49 +162,3 @@ def initialize_mcp(mcp_instance):
         return {
             "status": "done",
         }
-
-
-def __get_document(document_id: str) -> dict:
-    """
-    Retrieve the document record from the database by its ID.
-    """
-    mongodb_client = MongoDBClient()
-    
-    # Get the "uploads" collection via your helper
-    uploads_collection = mongodb_client.get_collection("uploads")
-    
-    # Look up the document by _id
-    try:
-        oid = ObjectId(document_id)
-    except Exception:
-        raise ValueError(f"Invalid document ID: {document_id!r}")
-    
-    document_record = uploads_collection.find_one({"_id": oid})
-
-    if not document_record:
-        raise ValueError(f"Document with ID {document_id} not found.")
-    
-    return document_record
-
-def __store_document(user_id: str, document_name: str, r2_key: str) -> str:
-    """
-    Store a new document record in the database and return its ID.
-    """
-    mongodb_client = MongoDBClient()
-    
-    # Get the "edits" collection
-    uploads_collection = mongodb_client.get_collection("edits")
-    
-    # Create a new document record
-    new_document = {
-        "user_id": user_id,
-        "original_name": document_name,
-        "r2_key": r2_key,
-        "created_at": datetime.utcnow(),
-    }
-    
-    # Insert the new document into the collection
-    result = uploads_collection.insert_one(new_document)
-    
-    # Return the ID of the newly created document
-    return str(result.inserted_id)

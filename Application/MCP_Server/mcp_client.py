@@ -104,15 +104,9 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
 
             try:
                 execution_result = await mcp_state.call_tool("execute_code_and_save", {"payload": edit_payload})
+                # edited_document_id = str(execution_result["document_id"])
 
-                # MCP tool failures may come back as a normal payload: {"result": "Error executing tool ..."}
-                if isinstance(execution_result, dict) and isinstance(execution_result.get("result"), str) and execution_result["result"].startswith("Error executing tool"):
-                    raise RuntimeError(execution_result["result"])
-
-                if not isinstance(execution_result, dict) or "document_id" not in execution_result:
-                    raise RuntimeError(f"Unexpected execute_code_and_save response: {execution_result!r}")
-
-                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': execution_result['document_id']})}\n\n"
+                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': execution_result})}\n\n"
             except Exception as ex:
                 yield f"data: {json.dumps({'type': 'execution_result', 'status': 'error', 'message': str(ex)})}\n\n"
 
