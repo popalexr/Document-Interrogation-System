@@ -197,7 +197,7 @@ def __store_document(user_id: str, document_name: str, r2_key: str) -> str:
         "user_id": user_id,
         "original_name": document_name,
         "r2_key": r2_key,
-        "timestamp": datetime.utcnow(),
+        "created_at": datetime.utcnow(),
     }
     
     # Insert the new document into the collection
