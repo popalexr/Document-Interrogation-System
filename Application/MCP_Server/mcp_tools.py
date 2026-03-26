@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from bson import ObjectId
 
 from lib.payloads import *
 from lib.vector_stores import *
 from lib.openai import OpenAIClient
-from lib.r2_storage import get_r2_stream
+from lib.r2_storage import get_r2_stream, save_to_r2
 from lib.mongo import MongoDBClient
 from lib.interrogation import collect_interrogation_answer
 from lib.edit_file import generate_editing_prompt, generate_editing_code, execute_code_in_docker
@@ -56,10 +58,10 @@ def initialize_mcp(mcp_instance):
         return editing_code
     
     @mcp.tool()
-    def execute_code(payload: dict) -> dict:
+    def execute_code_and_save(payload: dict) -> dict:
         """
-        Execute the generated code in a Docker container and return the output.
-        Payload keys: "code": str, "requirements": str, "output_file": str, "file_id": str
+        Execute the generated code in a Docker container, save and return the document_id.
+        Payload must contain 'code', 'requirements', 'document_id', 'output_file', 'packages', and 'user_id' keys.
         """
 
         document = __get_document(payload["document_id"])
@@ -79,8 +81,13 @@ def initialize_mcp(mcp_instance):
 
         output = execute_code_in_docker(code_payload)
 
-        return {"output": output}
-    
+        file_name = "edited_" + datetime.utcnow().isoformat() + "_" + document["original_name"]
+        new_key = save_to_r2(output, file_name)
+
+        document_id = __store_document(payload["user_id"], file_name, new_key)
+
+        return {"document_id": document_id}
+
     @mcp.tool()
     def name_chat(payload: NameChatPayload) -> dict:
         """
@@ -175,3 +182,26 @@ def __get_document(document_id: str) -> dict:
         raise ValueError(f"Document with ID {document_id} not found.")
     
     return document_record
+
+def __store_document(user_id: str, document_name: str, r2_key: str) -> str:
+    """
+    Store a new document record in the database and return its ID.
+    """
+    mongodb_client = MongoDBClient()
+    
+    # Get the "edits" collection
+    uploads_collection = mongodb_client.get_collection("edits")
+    
+    # Create a new document record
+    new_document = {
+        "user_id": user_id,
+        "original_name": document_name,
+        "r2_key": r2_key,
+        "timestamp": datetime.utcnow(),
+    }
+    
+    # Insert the new document into the collection
+    result = uploads_collection.insert_one(new_document)
+    
+    # Return the ID of the newly created document
+    return str(result.inserted_id)

@@ -91,7 +91,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
             )
 
             edit_code = await mcp_state.call_tool("edit_code", {"payload": edit_payload.model_dump()})
-            yield f"data: {json.dumps({'type': 'edit_code', 'message': edit_code})}\n\n"
+            yield f"data: {json.dumps({'type': 'edit_code', 'status': 'ok', 'message': edit_code})}\n\n"
 
             edit_payload = {
                 "code": edit_code["code"],
@@ -99,10 +99,22 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
                 "document_id": payload.document_id,
                 "output_file": edit_code["output_file"],
                 "packages": edit_code["packages"],
+                "user_id": payload.user_id,
             }
 
-            execution_result = await mcp_state.call_tool("execute_code", {"payload": edit_payload})
-            yield f"data: {json.dumps({'type': 'execution_result', 'message': execution_result})}\n\n"
+            try:
+                execution_result = await mcp_state.call_tool("execute_code_and_save", {"payload": edit_payload})
+
+                # MCP tool failures may come back as a normal payload: {"result": "Error executing tool ..."}
+                if isinstance(execution_result, dict) and isinstance(execution_result.get("result"), str) and execution_result["result"].startswith("Error executing tool"):
+                    raise RuntimeError(execution_result["result"])
+
+                if not isinstance(execution_result, dict) or "document_id" not in execution_result:
+                    raise RuntimeError(f"Unexpected execute_code_and_save response: {execution_result!r}")
+
+                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': execution_result['document_id']})}\n\n"
+            except Exception as ex:
+                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'error', 'message': str(ex)})}\n\n"
 
         except Exception as exc:
             error_event = {"type": "error", "message": str(exc)}

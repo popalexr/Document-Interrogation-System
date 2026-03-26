@@ -4,8 +4,35 @@ import tarfile
 from typing import Dict, Union, Optional
 
 import docker
+from docker.errors import APIError, DockerException, ImageNotFound
 
 BytesLike = Union[bytes, str]
+
+
+def _docker_runtime_error(exc: Exception) -> RuntimeError:
+    """
+    Convert low-level Docker SDK errors to a clear, actionable runtime error.
+    This function is used mostly for debugging.
+    """
+
+    details = str(exc)
+    lowered = details.lower()
+
+    if "filenotfounderror" in lowered or "no such file or directory" in lowered:
+        message = (
+            "Docker daemon is not reachable (socket missing). "
+            f"Original error: {details}"
+        )
+    elif "permission denied" in lowered:
+        message = (
+            "Docker daemon is not reachable due to a permissions issue. "
+            "Ensure your user can access the Docker socket and retry. "
+            f"Original error: {details}"
+        )
+    else:
+        message = f"Docker runtime error: {details}"
+
+    return RuntimeError(message)
 
 def run_container_with_files(
     *,
@@ -15,13 +42,22 @@ def run_container_with_files(
     command: list[str],          # command to run in the container, ex. ["python", "script.py"]
     output_path_in_container: Optional[str] = None, # if specified, the file at this path in the container will be returned as bytes
 ):
-    client = docker.from_env()
+    try:
+        client = docker.from_env()
+        client.ping()
+    except DockerException as exc:
+        raise _docker_runtime_error(exc) from exc
 
     # Pull image if missing locally
     try:
         client.images.get(image)
-    except docker.errors.ImageNotFound:
-        client.images.pull(image)
+    except ImageNotFound:
+        try:
+            client.images.pull(image)
+        except (DockerException, APIError) as exc:
+            raise _docker_runtime_error(exc) from exc
+    except (DockerException, APIError) as exc:
+        raise _docker_runtime_error(exc) from exc
     
     container = None
 
@@ -69,6 +105,8 @@ def run_container_with_files(
         data = _extract_single_file_from_tar_stream(tar_bytes, wanted_name)
 
         return data
+    except (DockerException, APIError) as exc:
+        raise _docker_runtime_error(exc) from exc
     
     finally:
         if container is not None:
