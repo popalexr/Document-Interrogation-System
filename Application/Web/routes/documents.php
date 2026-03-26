@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Documents\DeleteDocumentController;
+use App\Http\Controllers\Documents\EditDocumentController;
 use App\Http\Controllers\Documents\InterrogateDocumentController;
 use App\Http\Controllers\Documents\ViewDocumentController;
 use App\Http\Controllers\Files\DownloadFileController;
@@ -19,6 +20,8 @@ Route::middleware(['auth'])->prefix('documents')->group(function () {
         ->name('documents.view');
     Route::get('/interrogate', [InterrogateDocumentController::class, 'index'])
         ->name('documents.interrogate');
+    Route::get('/edit', EditDocumentController::class)
+        ->name('documents.edit');
 
     Route::post('/interrogate', [InterrogateDocumentController::class, 'store'])
         ->name('documents.interrogate.store');
