@@ -11,6 +11,19 @@ import { computed } from 'vue';
 
 const page = usePage();
 
+type ChatMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+};
+
+type ChatData = {
+    id: string;
+    title: string;
+    messages: ChatMessage[];
+};
+
+const chatData = computed<ChatData[]>(() => ((page.props as any).chatData ?? []) as ChatData[]);
+
 const documentInfo = computed(
     () => (page.props.document ?? {}) as Record<string, unknown>,
 );
@@ -64,7 +77,9 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
                     :file-name="documentName"
                     :mime-type="documentMimeType"
                 />
-                <EditDocumentAssistantSidebar />
+                <EditDocumentAssistantSidebar
+                    :chats="chatData"
+                />
             </div>
         </div>
     </AppLayout>
