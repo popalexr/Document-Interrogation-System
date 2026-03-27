@@ -87,7 +87,7 @@ def initialize_mcp(mcp_instance):
         file_name = "edited_" + datetime.utcnow().isoformat() + "_" + document["original_name"]
         new_key = save_to_r2(output, file_name)
 
-        document_id = edits.store_document(payload["user_id"], file_name, new_key)
+        document_id = edits.store_document(payload["document_id"], payload["user_id"], file_name, new_key)
 
         return {"document_id": document_id}
 

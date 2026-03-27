@@ -9,7 +9,7 @@ def init():
     global client
     client = MongoDBClient()
 
-def store_document(user_id: str, document_name: str, r2_key: str) -> str:
+def store_document(original_document_id: str, user_id: str, document_name: str, r2_key: str) -> str:
     """
     Store a new document record in the database and return its ID.
     """
@@ -20,6 +20,7 @@ def store_document(user_id: str, document_name: str, r2_key: str) -> str:
     # Create a new document record
     new_document = {
         "user_id": user_id,
+        "original_document_id": ObjectId(original_document_id),
         "original_name": document_name,
         "r2_key": r2_key,
         "created_at": datetime.utcnow(),
