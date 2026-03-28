@@ -26,6 +26,7 @@ const props = defineProps<{
     fileId: string;
     fileName: string;
     mimeType?: string;
+    isEditedFile?: boolean;
 }>();
 
 const fileUrl = computed(() => {
@@ -34,7 +35,9 @@ const fileUrl = computed(() => {
     }
 
     return new URL(
-        api.viewFile.url({ query: { id: props.fileId } }),
+        (props.isEditedFile ? api.viewEditedFile : api.viewFile).url({
+            query: { id: props.fileId },
+        }),
         window.location.origin,
     ).toString();
 });

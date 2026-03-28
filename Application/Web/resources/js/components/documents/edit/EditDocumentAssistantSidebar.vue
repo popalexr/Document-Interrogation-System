@@ -3,18 +3,201 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
 import { Bot, Paperclip, SendHorizontal } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 type EditorTab = 'chat' | 'history';
 
+type ChatMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+    reasoning?: string | null;
+    edit_document_id?: string | null;
+    at?: string | Date | null;
+    loading?: boolean;
+};
+
+type HistoryEntry = {
+    id: string;
+    title: string;
+    description: string;
+    reasoning?: string | null;
+    documentId: string;
+    prompt?: string | null;
+    at?: string | Date | null;
+    isOriginal: boolean;
+};
+
 const props = defineProps<{
-    chats: any
+    messages: ChatMessage[];
+    prompt: string;
+    sending: boolean;
+    previewDocumentId: string;
+    originalDocumentId: string;
+    documentName: string;
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:prompt', value: string): void;
+    (e: 'submit'): void;
+    (e: 'preview', documentId: string): void;
+    (e: 'reset-preview'): void;
+    (e: 'open-document', documentId: string): void;
 }>();
 
 const activeTab = ref<EditorTab>('chat');
-const prompt = ref('');
+const chatContainer = ref<HTMLElement | null>(null);
 
 const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
+
+const canSend = computed(
+    () => props.prompt.trim().length > 0 && !props.sending,
+);
+
+const assistantContent = (message: ChatMessage) => {
+    if (message.content.trim()) {
+        return message.content;
+    }
+
+    if (message.loading) {
+        return 'Generating edited document...';
+    }
+
+    if (message.edit_document_id) {
+        return 'Edited document generated successfully. Preview is ready.';
+    }
+
+    return 'Waiting for edit result...';
+};
+
+const isPreviewingMessage = (message: ChatMessage) =>
+    Boolean(message.edit_document_id) &&
+    message.edit_document_id === props.previewDocumentId;
+
+const showMessageActions = (message: ChatMessage) =>
+    message.role === 'assistant' &&
+    typeof message.edit_document_id === 'string' &&
+    message.edit_document_id.length > 0;
+
+const formatTimestamp = (value?: string | Date | null) => {
+    if (!value) {
+        return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date.toLocaleString();
+};
+
+const historyEntries = computed<HistoryEntry[]>(() => {
+    const entries: HistoryEntry[] = [
+        {
+            id: `original-${props.originalDocumentId}`,
+            title: 'Original document',
+            description: props.documentName || 'Original source file',
+            documentId: props.originalDocumentId,
+            isOriginal: true,
+        },
+    ];
+
+    let latestUserPrompt: string | null = null;
+    let versionIndex = 0;
+
+    for (const message of props.messages) {
+        if (message.role === 'user') {
+            latestUserPrompt = message.content || null;
+            continue;
+        }
+
+        if (
+            message.role !== 'assistant' ||
+            !message.edit_document_id ||
+            message.edit_document_id.length === 0
+        ) {
+            continue;
+        }
+
+        versionIndex += 1;
+
+        entries.push({
+            id: `${message.edit_document_id}-${versionIndex}`,
+            title: `Version ${versionIndex}`,
+            description:
+                message.content?.trim() ||
+                'Edited document generated successfully.',
+            reasoning: message.reasoning,
+            documentId: message.edit_document_id,
+            prompt: latestUserPrompt,
+            at: message.at,
+            isOriginal: false,
+        });
+    }
+
+    return entries.slice().reverse();
+});
+
+const previewHistoryEntry = (entry: HistoryEntry) => {
+    if (entry.isOriginal) {
+        emit('reset-preview');
+        return;
+    }
+
+    emit('preview', entry.documentId);
+};
+
+const openHistoryEntry = (entry: HistoryEntry) => {
+    emit('open-document', entry.documentId);
+};
+
+const isPreviewingHistoryEntry = (entry: HistoryEntry) =>
+    entry.documentId === props.previewDocumentId;
+
+const scrollToBottom = () => {
+    const container = chatContainer.value;
+    if (!container) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+    });
+};
+
+watch(
+    () => props.messages,
+    async () => {
+        await nextTick();
+        scrollToBottom();
+    },
+    { deep: true },
+);
+
+const updatePrompt = (value: string | number) => {
+    emit('update:prompt', String(value));
+};
+
+const send = () => {
+    if (!canSend.value) {
+        return;
+    }
+
+    emit('submit');
+};
+
+const handlePromptKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter') {
+        return;
+    }
+
+    event.preventDefault();
+    send();
+};
+
+const applyPromptChip = (chip: string) => {
+    emit('update:prompt', chip);
+};
 </script>
 
 <template>
@@ -52,10 +235,17 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
 
         <template v-if="activeTab === 'chat'">
             <div
+                ref="chatContainer"
                 class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5"
             >
-                <div v-for="message in chats.messages">
-                    <div class="flex items-start justify-end gap-3" v-if="message.role === 'user'">
+                <div
+                    v-for="(message, index) in messages"
+                    :key="`${message.role}-${index}`"
+                >
+                    <div
+                        v-if="message.role === 'user'"
+                        class="flex items-start justify-end gap-3"
+                    >
                         <div
                             class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 text-foreground"
                         >
@@ -63,7 +253,10 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
                         </div>
                     </div>
 
-                    <div class="flex items-start gap-3 py-3" v-if="message.role === 'assistant' && message.reasoning">
+                    <div
+                        v-if="message.role === 'assistant' && message.reasoning"
+                        class="flex items-start gap-3 py-3"
+                    >
                         <Avatar
                             class="size-10 border border-primary/20 bg-primary/10"
                         >
@@ -91,7 +284,10 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
                         </div>
                     </div>
 
-                    <div class="flex items-start gap-3 py-3" v-if="message.role === 'assistant'">
+                    <div
+                        v-if="message.role === 'assistant'"
+                        class="flex items-start gap-3 py-3"
+                    >
                         <Avatar
                             class="size-10 border border-primary/20 bg-primary/10"
                         >
@@ -114,19 +310,49 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
                             <div
                                 class="space-y-3 px-4 py-4 leading-[1.65] text-foreground"
                             >
-                                {{ message.content }}
+                                {{ assistantContent(message) }}
                             </div>
 
                             <div
+                                v-if="showMessageActions(message)"
                                 class="flex flex-wrap gap-2 border-t border-border/70 px-4 py-3"
                             >
-                                <Button size="sm" class="shadow-none">
-                                    Apply Change
+                                <Button
+                                    size="sm"
+                                    class="shadow-none"
+                                    @click="
+                                        emit(
+                                            'open-document',
+                                            message.edit_document_id || '',
+                                        )
+                                    "
+                                >
+                                    Save Change
                                 </Button>
-                                <Button size="sm" variant="outline">
+                                <Button
+                                    size="sm"
+                                    :variant="
+                                        isPreviewingMessage(message)
+                                            ? 'default'
+                                            : 'outline'
+                                    "
+                                    @click="
+                                        emit(
+                                            'preview',
+                                            message.edit_document_id || '',
+                                        )
+                                    "
+                                >
                                     Preview Change
                                 </Button>
-                                <Button size="sm" variant="outline">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    :disabled="
+                                        previewDocumentId === originalDocumentId
+                                    "
+                                    @click="emit('reset-preview')"
+                                >
                                     Discard
                                 </Button>
                             </div>
@@ -139,17 +365,24 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
                 <div
                     class="flex items-center gap-2 rounded-lg border border-input bg-background px-2"
                 >
-                    <Button variant="ghost" size="icon" class="size-8">
+                    <Button variant="ghost" size="icon" class="size-8" disabled>
                         <Paperclip class="size-4 text-muted-foreground" />
                     </Button>
                     <Input
-                        v-model="prompt"
+                        :model-value="prompt"
                         placeholder="Send a message..."
                         class="h-11 border-0 px-0 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0"
+                        @update:model-value="updatePrompt"
+                        @keydown="handlePromptKeydown"
                     />
-                    <Button size="sm" class="h-9 px-3">
+                    <Button
+                        size="sm"
+                        class="h-9 px-3"
+                        :disabled="!canSend"
+                        @click="send"
+                    >
                         <SendHorizontal class="size-4" />
-                        Send
+                        {{ sending ? 'Sending...' : 'Send' }}
                     </Button>
                 </div>
 
@@ -159,6 +392,8 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
                         :key="chip"
                         type="button"
                         class="rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/70"
+                        :disabled="sending"
+                        @click="applyPromptChip(chip)"
                     >
                         {{ chip }}
                     </button>
@@ -167,17 +402,100 @@ const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
         </template>
 
         <template v-else>
-            <div class="flex flex-1 items-center justify-center p-6">
+            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
                 <div
-                    class="max-w-sm rounded-xl border border-dashed border-border bg-background p-6 text-center"
+                    v-if="historyEntries.length === 1"
+                    class="mb-3 rounded-xl border border-dashed border-border bg-background p-4 text-sm text-muted-foreground"
                 >
-                    <p class="font-medium text-foreground">
-                        No history available yet
-                    </p>
-                    <p class="mt-2 text-sm text-muted-foreground">
-                        Once you apply or discard edits, activity will appear
-                        here.
-                    </p>
+                    No generated versions yet. The original document remains
+                    available below until the assistant creates a new version.
+                </div>
+
+                <div class="space-y-3">
+                    <div
+                        v-for="entry in historyEntries"
+                        :key="entry.id"
+                        class="overflow-hidden rounded-xl border border-border bg-background"
+                    >
+                        <div
+                            class="flex items-start justify-between gap-3 border-b border-border/70 bg-muted/50 px-4 py-3"
+                        >
+                            <div class="min-w-0">
+                                <p class="font-medium text-foreground">
+                                    {{ entry.title }}
+                                </p>
+                                <p
+                                    v-if="formatTimestamp(entry.at)"
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
+                                    {{ formatTimestamp(entry.at) }}
+                                </p>
+                            </div>
+                            <span
+                                class="shrink-0 rounded-full px-2 py-1 text-xs font-medium"
+                                :class="
+                                    isPreviewingHistoryEntry(entry)
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-secondary text-secondary-foreground'
+                                "
+                            >
+                                {{
+                                    isPreviewingHistoryEntry(entry)
+                                        ? 'Current preview'
+                                        : entry.isOriginal
+                                          ? 'Baseline'
+                                          : 'Saved version'
+                                }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-3 px-4 py-4">
+                            <p class="text-sm leading-6 text-foreground">
+                                {{ entry.description }}
+                            </p>
+
+                            <div
+                                v-if="entry.prompt"
+                                class="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground"
+                            >
+                                Prompt: {{ entry.prompt }}
+                            </div>
+
+                            <div
+                                v-if="entry.reasoning"
+                                class="rounded-lg border border-border/70 px-3 py-2 text-sm text-muted-foreground"
+                            >
+                                {{ entry.reasoning }}
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex flex-wrap gap-2 border-t border-border/70 px-4 py-3"
+                        >
+                            <Button
+                                size="sm"
+                                :variant="
+                                    isPreviewingHistoryEntry(entry)
+                                        ? 'default'
+                                        : 'outline'
+                                "
+                                @click="previewHistoryEntry(entry)"
+                            >
+                                {{
+                                    entry.isOriginal
+                                        ? 'Preview Original'
+                                        : 'Preview Version'
+                                }}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                @click="openHistoryEntry(entry)"
+                            >
+                                Open Document
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </template>

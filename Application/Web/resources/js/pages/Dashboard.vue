@@ -207,7 +207,16 @@ function confirmDelete() {
                                                     Interrogate
                                                 </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                                            <DropdownMenuItem>
+                                                <Link
+                                                    as="button"
+                                                    class="block w-full cursor-pointer text-left"
+                                                    :href="documents.edit.url({ query: { id: u._id } })"
+                                                    prefetch
+                                                >
+                                                    Edit
+                                                </Link>
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem class="text-destructive" :as-child="true">
                                                 <button

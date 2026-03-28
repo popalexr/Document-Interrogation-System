@@ -127,7 +127,4 @@ def execute_code_in_docker(payload: dict) -> str:
 
     safe_name = os.path.basename(output_file)
     
-    with open(safe_name, "wb") as f:
-        f.write(output)
-
     return output

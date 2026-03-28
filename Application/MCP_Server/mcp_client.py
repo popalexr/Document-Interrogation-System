@@ -104,9 +104,11 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
 
             try:
                 execution_result = await mcp_state.call_tool("execute_code_and_save", {"payload": edit_payload})
-                # edited_document_id = str(execution_result["document_id"])
+                edited_document_id = str(execution_result["document_id"])
 
-                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': execution_result})}\n\n"
+                yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': edited_document_id})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'final_message', 'status': 'ok', 'message': "Done!"})}\n\n"
             except Exception as ex:
                 yield f"data: {json.dumps({'type': 'execution_result', 'status': 'error', 'message': str(ex)})}\n\n"
 

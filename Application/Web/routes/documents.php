@@ -25,6 +25,8 @@ Route::middleware(['auth'])->prefix('documents')->group(function () {
 
     Route::post('/interrogate', [InterrogateDocumentController::class, 'store'])
         ->name('documents.interrogate.store');
+    Route::post('/edit', [EditDocumentController::class, 'store'])
+        ->name('documents.edit_document');
     Route::post('/delete', DeleteDocumentController::class)
         ->name('documents.delete');
 });

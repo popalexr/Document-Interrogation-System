@@ -14,5 +14,11 @@ class EditInterrogation extends Eloquent
         'role',          // 'user' | 'assistant'
         'reasoning',     // optional explanation for the edit
         'content',       // message content (question/answer)
+        'edit_document_id', // reference to the edited document (if applicable)
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }
