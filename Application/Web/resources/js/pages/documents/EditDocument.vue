@@ -3,6 +3,7 @@ import EditDocumentAssistantSidebar from '@/components/documents/edit/EditDocume
 import EditDocumentEditorPane from '@/components/documents/edit/EditDocumentEditorPane.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { csrfToken } from '@/lib/utils';
+import { generateTitle as generateTitleRoute } from '@/routes/api';
 import { home as dashboard } from '@/routes/dashboard';
 import {
     edit as editDocumentPage,
@@ -26,6 +27,13 @@ type ChatData = {
     id: string | null;
     title: string | null;
     messages: ChatMessage[];
+};
+
+type ChatListEntry = {
+    chat_id: string;
+    title: string | null;
+    created_at?: string | Date | null;
+    updated_at?: string | Date | null;
 };
 
 const page = usePage();
@@ -60,6 +68,37 @@ const normalizeChatData = (raw: unknown): ChatData => {
             ? chat.messages.map(normalizeMessage)
             : [],
     };
+};
+
+const normalizeChatsList = (raw: unknown): ChatListEntry[] => {
+    if (!Array.isArray(raw)) {
+        return [];
+    }
+
+    return raw
+        .map((item) => {
+            const chat = (item ?? {}) as Record<string, unknown>;
+
+            if (typeof chat.chat_id !== 'string' || chat.chat_id.length === 0) {
+                return null;
+            }
+
+            return {
+                chat_id: chat.chat_id,
+                title: typeof chat.title === 'string' ? chat.title : null,
+                created_at:
+                    typeof chat.created_at === 'string' ||
+                    chat.created_at instanceof Date
+                        ? chat.created_at
+                        : null,
+                updated_at:
+                    typeof chat.updated_at === 'string' ||
+                    chat.updated_at instanceof Date
+                        ? chat.updated_at
+                        : null,
+            };
+        })
+        .filter((chat): chat is ChatListEntry => chat !== null);
 };
 
 const latestEditedDocumentId = (messages: ChatMessage[]): string | null => {
@@ -132,11 +171,15 @@ const documentMimeType = computed(() => {
 const initialChatData = computed<ChatData>(() =>
     normalizeChatData((page.props as Record<string, unknown>).chatData),
 );
+const initialChats = computed<ChatListEntry[]>(() =>
+    normalizeChatsList((page.props as Record<string, unknown>).chats),
+);
 
 const messages = ref<ChatMessage[]>([]);
 const prompt = ref('');
 const sending = ref(false);
 const chatId = ref<string | null>(null);
+const chatsList = ref<ChatListEntry[]>([]);
 const previewDocumentId = ref('');
 
 const isPreviewingEditedDocument = computed(
@@ -156,6 +199,10 @@ watch(
     { immediate: true },
 );
 
+watch(initialChats, (chats) => {
+    chatsList.value = chats;
+}, { immediate: true });
+
 watch(
     sourceDocumentId,
     (documentId) => {
@@ -166,26 +213,65 @@ watch(
     { immediate: true },
 );
 
-const breadcrumbs = computed<BreadcrumbItem[]>(() => [
-    {
-        title: 'Dashboard',
-        href: dashboard().url,
-    },
-    {
-        title: 'My Documents',
-        href: '#',
-    },
-    {
-        title: documentName.value,
-        href: sourceDocumentId.value
-            ? viewDocument.url({ query: { id: sourceDocumentId.value } })
-            : '#',
-    },
-    {
-        title: 'Edit Document',
-        href: '#',
-    },
-]);
+const activeChatTitle = computed(() => {
+    const activeChat = chatsList.value.find((chat) => chat.chat_id === chatId.value);
+    return activeChat?.title ?? null;
+});
+
+const breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    const items: BreadcrumbItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard().url,
+        },
+        {
+            title: 'My Documents',
+            href: '#',
+        },
+        {
+            title: documentName.value,
+            href: sourceDocumentId.value
+                ? viewDocument.url({ query: { id: sourceDocumentId.value } })
+                : '#',
+        },
+        {
+            title: 'Edit Document',
+            href: '#',
+        },
+    ];
+
+    if (activeChatTitle.value) {
+        items.push({
+            title: activeChatTitle.value,
+            href: '#',
+        });
+    }
+
+    return items;
+});
+
+const upsertChatEntry = (
+    entry: Pick<ChatListEntry, 'chat_id'> &
+        Partial<Omit<ChatListEntry, 'chat_id'>>,
+) => {
+    const existingEntry = chatsList.value.find(
+        (chat) => chat.chat_id === entry.chat_id,
+    );
+
+    const nextEntry: ChatListEntry = {
+        chat_id: entry.chat_id,
+        title: entry.title ?? existingEntry?.title ?? null,
+        created_at:
+            entry.created_at ?? existingEntry?.created_at ?? new Date(),
+        updated_at:
+            entry.updated_at ?? existingEntry?.updated_at ?? new Date(),
+    };
+
+    chatsList.value = [
+        nextEntry,
+        ...chatsList.value.filter((chat) => chat.chat_id !== entry.chat_id),
+    ];
+};
 
 const setPreviewDocument = (documentId: string) => {
     if (!documentId) {
@@ -205,6 +291,73 @@ const openEditedDocument = (documentId: string) => {
     }
 
     router.visit(viewDocument.url({ query: { id: documentId } }));
+};
+
+const openNewChat = () => {
+    if (!sourceDocumentId.value) {
+        return;
+    }
+
+    router.visit(editDocumentPage(), {
+        method: 'get',
+        data: {
+            id: sourceDocumentId.value,
+        },
+        preserveState: false,
+        replace: true,
+    });
+};
+
+const openChat = (nextChatId: string) => {
+    if (!sourceDocumentId.value || !nextChatId || nextChatId === chatId.value) {
+        return;
+    }
+
+    router.visit(editDocumentPage(), {
+        method: 'get',
+        data: {
+            id: sourceDocumentId.value,
+            chat_id: nextChatId,
+        },
+        preserveState: false,
+        replace: true,
+    });
+};
+
+const generateChatTitle = async (text: string, nextChatId: string) => {
+    if (!text.trim() || !nextChatId) {
+        return;
+    }
+
+    try {
+        const response = await fetch(generateTitleRoute.url(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken() ? { 'X-CSRF-TOKEN': csrfToken() ?? '' } : {}),
+            },
+            body: JSON.stringify({
+                query: text,
+                chat_id: nextChatId,
+            }),
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = (await response.json()) as Record<string, unknown>;
+        if (typeof data.title === 'string' && data.title.trim()) {
+            upsertChatEntry({
+                chat_id: nextChatId,
+                title: data.title,
+                updated_at: new Date(),
+            });
+        }
+    } catch {
+        // Title generation should not block the editing flow.
+    }
 };
 
 async function sendMessage() {
@@ -231,6 +384,13 @@ async function sendMessage() {
     messages.value.push(userMessage, assistantMessage);
     prompt.value = '';
     sending.value = true;
+
+    if (chatId.value) {
+        upsertChatEntry({
+            chat_id: chatId.value,
+            updated_at: new Date(),
+        });
+    }
 
     try {
         const response = await fetch(editDocumentStore.url(), {
@@ -339,6 +499,11 @@ async function sendMessage() {
 
                 if (payload.newChat && typeof payload.chatId === 'string') {
                     chatId.value = payload.chatId;
+                    upsertChatEntry({
+                        chat_id: payload.chatId,
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                    });
 
                     router.visit(editDocumentPage(), {
                         method: 'get',
@@ -349,6 +514,8 @@ async function sendMessage() {
                         preserveState: true,
                         replace: true,
                     });
+
+                    void generateChatTitle(text, payload.chatId);
                 }
 
                 if (
@@ -435,6 +602,8 @@ async function sendMessage() {
                 />
                 <EditDocumentAssistantSidebar
                     :messages="messages"
+                    :chats="chatsList"
+                    :active-chat-id="chatId"
                     :prompt="prompt"
                     :sending="sending"
                     :preview-document-id="previewDocumentId || sourceDocumentId"
@@ -442,6 +611,8 @@ async function sendMessage() {
                     :document-name="documentName"
                     @update:prompt="prompt = $event"
                     @submit="sendMessage"
+                    @new-chat="openNewChat"
+                    @select-chat="openChat"
                     @preview="setPreviewDocument"
                     @reset-preview="resetPreviewDocument"
                     @open-document="openEditedDocument"

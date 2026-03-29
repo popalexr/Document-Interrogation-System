@@ -21,7 +21,7 @@ import { Check, History, Redo2, Undo2 } from 'lucide-vue-next';
         </Button>
         <Button variant="outline" class="gap-2">
             <History class="size-4" />
-            Version History
+            Chat History
         </Button>
     </div>
 </template>

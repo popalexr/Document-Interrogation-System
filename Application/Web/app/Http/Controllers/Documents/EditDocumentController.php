@@ -36,9 +36,15 @@ class EditDocumentController extends Controller
             return redirect()->back()->with('error', 'Document not found.');
         }
 
+        if (!blank($this->chatId) && !$this->existsChat($this->chatId, $this->documentId)) {
+            return redirect()->route('documents.edit', ['id' => $this->documentId]);
+        }
+
         return Inertia::render('documents/EditDocument', [
             'document' => $this->document,
             'chatData' => $this->getEditChatData($this->chatId),
+            'chats'    => $this->getChatsList($this->documentId),
+            'chat_id'  => $this->chatId ?? null,
         ]);
     }
 
@@ -302,7 +308,7 @@ class EditDocumentController extends Controller
 
     private function storeEditInterrogation(array $data): EditInterrogation
     {
-        return EditInterrogation::create([
+        $interrogation = EditInterrogation::create([
             'chat_id'          => $data['chat_id'],
             'role'             => $data['role'] ?? 'user',
             'reasoning'        => $data['reasoning'] ?? null,
@@ -311,6 +317,10 @@ class EditDocumentController extends Controller
             'created_at'       => now(),
             'updated_at'       => now(),
         ]);
+
+        $this->touchChat($data['chat_id']);
+
+        return $interrogation;
     }
 
     private function upsertAssistantInterrogation(?EditInterrogation $interrogation, array $data): EditInterrogation
@@ -335,13 +345,50 @@ class EditDocumentController extends Controller
 
         if (blank($interrogation)) {
             $payload['created_at'] = now();
-            return EditInterrogation::create($payload);
+            $interrogation = EditInterrogation::create($payload);
+            $this->touchChat($data['chat_id']);
+
+            return $interrogation;
         }
 
         $interrogation->fill($payload);
         $interrogation->save();
 
+        $this->touchChat($data['chat_id']);
+
         return $interrogation;
+    }
+
+    private function touchChat(string $chatId): void
+    {
+        EditChat::query()
+            ->where('_id', $chatId)
+            ->where('user_id', $this->userId)
+            ->update([
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function getChatsList(string $documentId): array
+    {
+        $chats = EditChat::query()
+            ->where('document_id', $documentId)
+            ->where('user_id', $this->userId)
+            ->orderBy('updated_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $chatsList = [];
+        foreach ($chats as $chat) {
+            $chatsList[] = [
+                'chat_id'    => (string) $chat->_id,
+                'title'      => $chat->title ?? null,
+                'created_at' => $chat->created_at,
+                'updated_at' => $chat->updated_at,
+            ];
+        }
+
+        return $chatsList;
     }
 
     private function consumeEditStreamBuffer(

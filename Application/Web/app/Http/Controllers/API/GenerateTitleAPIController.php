@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\GenerateTitleRequest;
 use App\Models\Chat;
+use App\Models\EditChat;
 use Illuminate\Support\Facades\Http;
 
 class GenerateTitleAPIController extends Controller
@@ -14,7 +15,11 @@ class GenerateTitleAPIController extends Controller
     
     public function __invoke()
     {
-        $chat = Chat::find($this->request['chat_id']);
+        $chat = Chat::find($this->request['chat_id']) ?? EditChat::find($this->request['chat_id']);
+
+        if (blank($chat)) {
+            return response()->json(['error' => 'Chat not found'], 404);
+        }
 
         $response = Http::post(config('mcp.host') . ':' . config('mcp.port') . config('mcp.generate_title_endpoint'), [
             'query' => $this->request['query'],
@@ -22,7 +27,10 @@ class GenerateTitleAPIController extends Controller
 
         if ($response->successful()) {
             $title = $response->json()['title'];
-            $chat->update(['title' => $title]);
+            $chat->update([
+                'title'      => $title,
+                'updated_at' => now(),
+            ]);
 
             return response()->json($response->json());
         } else {
