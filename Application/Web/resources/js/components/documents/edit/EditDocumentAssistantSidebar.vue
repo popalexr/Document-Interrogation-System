@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Button from '@/components/ui/button/Button.vue';
-import Input from '@/components/ui/input/Input.vue';
 import { Bot, Paperclip, SendHorizontal } from 'lucide-vue-next';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 type EditorTab = 'chat' | 'history';
 
@@ -46,8 +45,11 @@ const emit = defineEmits<{
 
 const activeTab = ref<EditorTab>('chat');
 const chatContainer = ref<HTMLElement | null>(null);
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const lineHeightPx = ref(0);
 
 const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
+const maxRows = 4;
 
 const canSend = computed(
     () => props.prompt.trim().length > 0 && !props.sending,
@@ -120,6 +122,21 @@ const updatePrompt = (value: string | number) => {
     emit('update:prompt', String(value));
 };
 
+const autoGrow = () => {
+    const el = textareaRef.value;
+    if (!el) {
+        return;
+    }
+
+    el.style.height = 'auto';
+
+    const maxHeight = lineHeightPx.value * maxRows;
+    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+};
+
 const send = () => {
     if (!canSend.value) {
         return;
@@ -129,7 +146,7 @@ const send = () => {
 };
 
 const handlePromptKeydown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter') {
+    if (event.key !== 'Enter' || event.shiftKey) {
         return;
     }
 
@@ -140,6 +157,25 @@ const handlePromptKeydown = (event: KeyboardEvent) => {
 const applyPromptChip = (chip: string) => {
     emit('update:prompt', chip);
 };
+
+onMounted(() => {
+    const el = textareaRef.value;
+    if (!el) {
+        return;
+    }
+
+    const styles = window.getComputedStyle(el);
+    lineHeightPx.value = parseFloat(styles.lineHeight) || 20;
+    autoGrow();
+});
+
+watch(
+    () => props.prompt,
+    async () => {
+        await nextTick();
+        autoGrow();
+    },
+);
 </script>
 
 <template>
@@ -310,13 +346,19 @@ const applyPromptChip = (chip: string) => {
                     <Button variant="ghost" size="icon" class="size-8" disabled>
                         <Paperclip class="size-4 text-muted-foreground" />
                     </Button>
-                    <Input
-                        :model-value="prompt"
+                    <textarea
+                        ref="textareaRef"
+                        :value="prompt"
+                        rows="1"
                         placeholder="Send a message..."
-                        class="h-11 border-0 px-0 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0"
-                        @update:model-value="updatePrompt"
+                        class="max-h-24 min-h-11 w-full resize-none border-0 bg-transparent px-0 py-3 text-base leading-snug text-foreground shadow-none outline-none placeholder:text-muted-foreground"
+                        @input="
+                            updatePrompt(
+                                ($event.target as HTMLTextAreaElement).value,
+                            )
+                        "
                         @keydown="handlePromptKeydown"
-                    />
+                    ></textarea>
                     <Button
                         size="sm"
                         class="h-9 px-3"
