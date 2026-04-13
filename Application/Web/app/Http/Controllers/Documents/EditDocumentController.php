@@ -441,11 +441,30 @@ class EditDocumentController extends Controller
                     $assistantInterrogation = $this->upsertAssistantInterrogation($assistantInterrogation, $assistantPayload);
                 }
 
+                if (($payload['status'] ?? null) === 'error') {
+                    $content = $this->extractFinalMessageContent($payload);
+                    if (!blank($content)) {
+                        $assistantPayload['content'] = $content;
+                        $assistantInterrogation = $this->upsertAssistantInterrogation($assistantInterrogation, $assistantPayload);
+                    }
+                }
+
                 $events[] = $payload;
                 continue;
             }
 
             if ($type === 'final_message') {
+                $content = $this->extractFinalMessageContent($payload);
+                if (!blank($content)) {
+                    $assistantPayload['content'] = $content;
+                    $assistantInterrogation = $this->upsertAssistantInterrogation($assistantInterrogation, $assistantPayload);
+                }
+
+                $events[] = $payload;
+                continue;
+            }
+
+            if ($type === 'error') {
                 $content = $this->extractFinalMessageContent($payload);
                 if (!blank($content)) {
                     $assistantPayload['content'] = $content;

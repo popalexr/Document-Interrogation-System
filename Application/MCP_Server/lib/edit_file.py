@@ -21,7 +21,7 @@ def generate_editing_prompt(payload: EditPayload) -> dict:
         raise ValueError("Vector store for this user not found.")
     
     response = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-5.4",
         tools=[
             {
                 "type": "file_search",
@@ -119,12 +119,10 @@ def execute_code_in_docker(payload: dict) -> str:
     linux_script = (("apt-get update && apt-get install -y " + packages + " && ") if packages else "") + "pip install -r requirements.txt && python script.py" 
 
     output = run_container_with_files(
-        image="python:3.11-slim",
+        image="python:3.11.15-slim-trixie",
         files=files,
         command=["sh", "-c", linux_script],
         output_path_in_container=output_file,
     )
-
-    safe_name = os.path.basename(output_file)
     
     return output

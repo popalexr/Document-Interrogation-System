@@ -67,26 +67,39 @@ class MCPState:
 
         result = await self.session.call_tool(name, arguments)
 
-        # Extract common text content shapes
-        try:
-            if isinstance(result, dict):
-                return result
+        structured_content = getattr(result, "structuredContent", None)
+        is_error = bool(getattr(result, "isError", False))
 
+        try:
             content = getattr(result, "content", None)
-            if isinstance(content, list) and content:
-                texts = []
+            texts = []
+            if isinstance(content, list):
                 for part in content:
                     text = getattr(part, "text", None)
                     if text is not None:
                         texts.append(text)
-                if texts:
-                    text = "\n".join(texts).strip()
 
-                    try:
-                        return json.loads(text)
-                    except:
-                        return {"result": text}
+            text = "\n".join(texts).strip()
+
+            if is_error:
+                if text:
+                    raise RuntimeError(text)
+
+                if isinstance(structured_content, dict):
+                    encoded = json.dumps(structured_content, ensure_ascii=False)
+                    raise RuntimeError(encoded)
+
+                raise RuntimeError(f"Tool '{name}' returned an error result")
+
+            if isinstance(structured_content, dict):
+                return structured_content
+
+            if text:
+                try:
+                    return json.loads(text)
+                except Exception:
+                    return {"result": text}
 
             return {"result": repr(result)}
         except Exception:
-            return {"result": str(result)}
+            raise
