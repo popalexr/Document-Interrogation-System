@@ -183,31 +183,37 @@ watch(
         class="flex min-h-[26rem] w-full min-w-0 flex-col border-t border-border/80 bg-muted/20 lg:min-h-0 lg:w-[35rem] lg:max-w-[44vw] lg:border-t-0 lg:border-l"
     >
         <div class="border-b border-border/80 bg-background px-4 sm:px-6">
-            <div class="flex items-center gap-7">
-                <button
-                    type="button"
-                    class="border-b-[3px] px-1 py-4"
-                    :class="
-                        activeTab === 'chat'
-                            ? 'border-primary font-semibold text-foreground'
-                            : 'border-transparent text-muted-foreground'
-                    "
-                    @click="activeTab = 'chat'"
-                >
-                    Chat
-                </button>
-                <button
-                    type="button"
-                    class="border-b-[3px] px-1 py-4"
-                    :class="
-                        activeTab === 'history'
-                            ? 'border-primary font-semibold text-foreground'
-                            : 'border-transparent text-muted-foreground'
-                    "
-                    @click="activeTab = 'history'"
-                >
-                    History
-                </button>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-7">
+                    <button
+                        type="button"
+                        class="border-b-[3px] px-1 py-4"
+                        :class="
+                            activeTab === 'chat'
+                                ? 'border-primary font-semibold text-foreground'
+                                : 'border-transparent text-muted-foreground'
+                        "
+                        @click="activeTab = 'chat'"
+                    >
+                        Chat
+                    </button>
+                    <button
+                        type="button"
+                        class="border-b-[3px] px-1 py-4"
+                        :class="
+                            activeTab === 'history'
+                                ? 'border-primary font-semibold text-foreground'
+                                : 'border-transparent text-muted-foreground'
+                        "
+                        @click="activeTab = 'history'"
+                    >
+                        History
+                    </button>
+                </div>
+
+                <Button size="sm" class="shrink-0" @click="emit('new-chat')">
+                    New chat
+                </Button>
             </div>
         </div>
 
@@ -397,9 +403,6 @@ watch(
                             document.
                         </p>
                     </div>
-                    <Button size="sm" class="shrink-0" @click="emit('new-chat')">
-                        New chat
-                    </Button>
                 </div>
 
                 <div
