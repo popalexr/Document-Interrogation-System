@@ -89,8 +89,7 @@ Return only a valid JSON object with exactly these keys:
 - "packages": string, required, use "" if none
 - "output_file": string, required
 
-In JSON, the "requirements" field contains Python package requirements with pinned versions, for example:
-"requirements": "PyMuPDF==1.22.3\npymupdf4llm==0.0.4"
+In JSON, the "requirements" field contains Python package requirements, example: "requirements": "PyMuPDF\npymupdf4llm"
 
 In JSON, the "packages" field contains linux packages to install, if any, that are installed via apt-install.
 

@@ -1,3 +1,5 @@
+import mimetypes
+import os
 from datetime import datetime
 
 from lib.payloads import *
@@ -84,10 +86,26 @@ def initialize_mcp(mcp_instance):
 
         output = execute_code_in_docker(code_payload)
 
-        file_name = "edited_" + datetime.utcnow().isoformat() + "_" + document["original_name"]
-        new_key = save_to_r2(output, file_name)
+        stored_file_name = _resolve_saved_document_name(
+            payload.get("prompt_output_file"),
+            payload.get("output_file"),
+            document["original_name"],
+        )
+        storage_file_name = "edited_" + datetime.utcnow().isoformat() + "_" + stored_file_name
+        new_key = save_to_r2(output, storage_file_name)
 
-        document_id = edits.store_document(payload["document_id"], payload["user_id"], file_name, new_key)
+        mime_type = _resolve_edited_mime_type(
+            payload.get("output_file"),
+            document.get("mime_type"),
+        )
+
+        document_id = edits.store_document(
+            payload["document_id"],
+            payload["user_id"],
+            stored_file_name,
+            new_key,
+            mime_type,
+        )
 
         return {"document_id": document_id}
 
@@ -162,3 +180,29 @@ def initialize_mcp(mcp_instance):
         return {
             "status": "done",
         }
+
+def _resolve_edited_mime_type(output_file: str | None, fallback_mime_type: str | None) -> str:
+    """
+    Resolve the edited file MIME type from the generated output filename.
+    """
+
+    guessed_mime_type, _ = mimetypes.guess_type(os.path.basename(output_file or ""))
+
+    return guessed_mime_type or fallback_mime_type or "application/octet-stream"
+
+
+def _resolve_saved_document_name(
+    prompt_output_file: str | None,
+    generated_output_file: str | None,
+    fallback_name: str,
+) -> str:
+    """
+    Resolve the filename persisted in the database for the edited document.
+    """
+
+    for candidate in (prompt_output_file, generated_output_file, fallback_name):
+        base_name = os.path.basename((candidate or "").strip())
+        if base_name:
+            return base_name
+
+    return fallback_name

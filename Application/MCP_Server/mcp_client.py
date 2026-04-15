@@ -83,6 +83,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
         try:
             edit_prompt = await mcp_state.call_tool("edit_prompt", {"payload": payload.model_dump()})
             yield f"data: {json.dumps({'type': 'edit_prompt', 'message': edit_prompt})}\n\n"
+            edit_prompt_output_file = _extract_edit_prompt_output_file(edit_prompt)
 
             edit_payload = EditPayload(
                 document_id=payload.document_id,
@@ -99,6 +100,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
                 "document_id": payload.document_id,
                 "output_file": edit_code["output_file"],
                 "packages": edit_code["packages"],
+                "prompt_output_file": edit_prompt_output_file,
                 "user_id": payload.user_id,
             }
 
@@ -163,3 +165,27 @@ if __name__ == "__main__":
         port=int(os.getenv("HTTP_PORT", 8888)),
         reload=True,
     )
+
+def _extract_edit_prompt_output_file(edit_prompt: dict[str, Any]) -> str | None:
+    """
+    Extract the planned output filename from the edit_prompt tool response.
+    """
+
+    prompt = edit_prompt.get("prompt")
+
+    if isinstance(prompt, dict):
+        output_file = prompt.get("output_file")
+        
+        return output_file if isinstance(output_file, str) and output_file.strip() else None
+
+    if not isinstance(prompt, str):
+        return None
+
+    try:
+        parsed_prompt = json.loads(prompt)
+    except json.JSONDecodeError:
+        return None
+
+    output_file = parsed_prompt.get("output_file")
+
+    return output_file if isinstance(output_file, str) and output_file.strip() else None
