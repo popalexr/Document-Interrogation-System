@@ -393,89 +393,63 @@ watch(
 
         <template v-else>
             <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="font-medium text-foreground">
-                            All edit chats
-                        </p>
-                        <p class="text-sm text-muted-foreground">
-                            Reopen any previous editing conversation for this
-                            document.
-                        </p>
-                    </div>
-                </div>
+                <p class="mb-3 text-sm font-medium text-foreground">
+                    Edit chats
+                </p>
 
                 <div
                     v-if="historyEntries.length === 0"
-                    class="rounded-xl border border-dashed border-border bg-background p-4 text-sm text-muted-foreground"
+                    class="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-muted-foreground"
                 >
-                    No edit chats yet. Start a new request and this history will
-                    populate automatically.
+                    No edit chats yet.
                 </div>
 
-                <div class="space-y-3">
-                    <div
+                <div v-else class="space-y-2">
+                    <button
                         v-for="entry in historyEntries"
                         :key="entry.chat_id"
-                        class="overflow-hidden rounded-xl border border-border bg-background"
+                        type="button"
+                        class="flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-3 text-left transition-colors"
+                        :class="
+                            isActiveHistoryEntry(entry)
+                                ? 'border-primary/30 bg-primary/5'
+                                : 'border-border bg-background hover:bg-muted/50'
+                        "
+                        @click="emit('select-chat', entry.chat_id)"
                     >
-                        <div
-                            class="flex items-start justify-between gap-3 border-b border-border/70 bg-muted/50 px-4 py-3"
-                        >
-                            <div class="min-w-0">
-                                <p class="font-medium text-foreground">
-                                    {{ entry.title ?? 'Untitled Chat' }}
-                                </p>
-                                <p
-                                    v-if="
-                                        formatTimestamp(
-                                            entry.updated_at ?? entry.created_at,
-                                        )
-                                    "
-                                    class="mt-1 text-xs text-muted-foreground"
-                                >
-                                    {{
-                                        formatTimestamp(
-                                            entry.updated_at ?? entry.created_at,
-                                        )
-                                    }}
-                                </p>
-                            </div>
-                            <span
-                                class="shrink-0 rounded-full px-2 py-1 text-xs font-medium"
+                        <div class="min-w-0">
+                            <p
+                                class="truncate text-sm font-medium"
                                 :class="
                                     isActiveHistoryEntry(entry)
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-secondary text-secondary-foreground'
+                                        ? 'text-foreground'
+                                        : 'text-foreground/90'
                                 "
                             >
+                                {{ entry.title ?? 'Untitled Chat' }}
+                            </p>
+                            <p
+                                v-if="
+                                    formatTimestamp(
+                                        entry.updated_at ?? entry.created_at,
+                                    )
+                                "
+                                class="mt-1 text-xs text-muted-foreground"
+                            >
                                 {{
-                                    isActiveHistoryEntry(entry)
-                                        ? 'Current chat'
-                                        : 'History'
+                                    formatTimestamp(
+                                        entry.updated_at ?? entry.created_at,
+                                    )
                                 }}
-                            </span>
+                            </p>
                         </div>
-                        <div
-                            class="flex flex-wrap gap-2 border-t border-border/70 px-4 py-3"
+                        <span
+                            v-if="isActiveHistoryEntry(entry)"
+                            class="shrink-0 text-xs font-medium text-primary"
                         >
-                            <Button
-                                size="sm"
-                                :variant="
-                                    isActiveHistoryEntry(entry)
-                                        ? 'default'
-                                        : 'outline'
-                                "
-                                @click="emit('select-chat', entry.chat_id)"
-                            >
-                                {{
-                                    isActiveHistoryEntry(entry)
-                                        ? 'Current chat'
-                                        : 'Open chat'
-                                }}
-                            </Button>
-                        </div>
-                    </div>
+                            Current
+                        </span>
+                    </button>
                 </div>
             </div>
         </template>
