@@ -199,9 +199,13 @@ watch(
     { immediate: true },
 );
 
-watch(initialChats, (chats) => {
-    chatsList.value = chats;
-}, { immediate: true });
+watch(
+    initialChats,
+    (chats) => {
+        chatsList.value = chats;
+    },
+    { immediate: true },
+);
 
 watch(
     sourceDocumentId,
@@ -214,7 +218,9 @@ watch(
 );
 
 const activeChatTitle = computed(() => {
-    const activeChat = chatsList.value.find((chat) => chat.chat_id === chatId.value);
+    const activeChat = chatsList.value.find(
+        (chat) => chat.chat_id === chatId.value,
+    );
     return activeChat?.title ?? null;
 });
 
@@ -261,10 +267,8 @@ const upsertChatEntry = (
     const nextEntry: ChatListEntry = {
         chat_id: entry.chat_id,
         title: entry.title ?? existingEntry?.title ?? null,
-        created_at:
-            entry.created_at ?? existingEntry?.created_at ?? new Date(),
-        updated_at:
-            entry.updated_at ?? existingEntry?.updated_at ?? new Date(),
+        created_at: entry.created_at ?? existingEntry?.created_at ?? new Date(),
+        updated_at: entry.updated_at ?? existingEntry?.updated_at ?? new Date(),
     };
 
     chatsList.value = [
@@ -322,6 +326,32 @@ const openChat = (nextChatId: string) => {
         preserveState: false,
         replace: true,
     });
+};
+
+const deleteChat = (targetChatId: string) => {
+    if (!targetChatId) {
+        return;
+    }
+
+    router.post(
+        '/chats/edit/delete',
+        {
+            chat_id: targetChatId,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                chatsList.value = chatsList.value.filter(
+                    (chat) => chat.chat_id !== targetChatId,
+                );
+
+                if (chatId.value === targetChatId) {
+                    previewDocumentId.value = sourceDocumentId.value;
+                    openNewChat();
+                }
+            },
+        },
+    );
 };
 
 const generateChatTitle = async (text: string, nextChatId: string) => {
@@ -616,6 +646,7 @@ async function sendMessage() {
                     @preview="setPreviewDocument"
                     @reset-preview="resetPreviewDocument"
                     @open-document="openEditedDocument"
+                    @delete-chat="deleteChat"
                 />
             </div>
         </div>

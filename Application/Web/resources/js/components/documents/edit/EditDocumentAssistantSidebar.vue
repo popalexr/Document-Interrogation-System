@@ -1,7 +1,24 @@
 <script setup lang="ts">
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Button from '@/components/ui/button/Button.vue';
-import { Bot, Paperclip, SendHorizontal } from 'lucide-vue-next';
+import Dialog from '@/components/ui/dialog/Dialog.vue';
+import DialogClose from '@/components/ui/dialog/DialogClose.vue';
+import DialogContent from '@/components/ui/dialog/DialogContent.vue';
+import DialogDescription from '@/components/ui/dialog/DialogDescription.vue';
+import DialogFooter from '@/components/ui/dialog/DialogFooter.vue';
+import DialogHeader from '@/components/ui/dialog/DialogHeader.vue';
+import DialogTitle from '@/components/ui/dialog/DialogTitle.vue';
+import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue';
+import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
+import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
+import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue';
+import {
+    Bot,
+    Ellipsis,
+    Paperclip,
+    SendHorizontal,
+    Trash,
+} from 'lucide-vue-next';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 type EditorTab = 'chat' | 'history';
@@ -41,12 +58,15 @@ const emit = defineEmits<{
     (e: 'preview', documentId: string): void;
     (e: 'reset-preview'): void;
     (e: 'open-document', documentId: string): void;
+    (e: 'delete-chat', chatId: string): void;
 }>();
 
 const activeTab = ref<EditorTab>('chat');
 const chatContainer = ref<HTMLElement | null>(null);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
+const deleteDialogOpen = ref(false);
+const deletingChat = ref<ChatHistoryEntry | null>(null);
 
 const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
 const maxRows = 4;
@@ -97,6 +117,28 @@ const historyEntries = computed<ChatHistoryEntry[]>(() => props.chats);
 
 const isActiveHistoryEntry = (entry: ChatHistoryEntry) =>
     entry.chat_id === props.activeChatId;
+
+const openDeleteDialog = (entry: ChatHistoryEntry) => {
+    deletingChat.value = entry;
+    deleteDialogOpen.value = true;
+};
+
+const handleDeleteDialogOpen = (open: boolean) => {
+    deleteDialogOpen.value = open;
+
+    if (!open) {
+        deletingChat.value = null;
+    }
+};
+
+const confirmDelete = () => {
+    if (!deletingChat.value) {
+        return;
+    }
+
+    emit('delete-chat', deletingChat.value.chat_id);
+    handleDeleteDialogOpen(false);
+};
 
 const scrollToBottom = () => {
     const container = chatContainer.value;
@@ -405,19 +447,21 @@ watch(
                 </div>
 
                 <div v-else class="space-y-2">
-                    <button
+                    <div
                         v-for="entry in historyEntries"
                         :key="entry.chat_id"
-                        type="button"
-                        class="flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-3 text-left transition-colors"
+                        class="flex items-center gap-2 rounded-lg border px-3 py-3 transition-colors"
                         :class="
                             isActiveHistoryEntry(entry)
                                 ? 'border-primary/30 bg-primary/5'
                                 : 'border-border bg-background hover:bg-muted/50'
                         "
-                        @click="emit('select-chat', entry.chat_id)"
                     >
-                        <div class="min-w-0">
+                        <button
+                            type="button"
+                            class="min-w-0 flex-1 text-left"
+                            @click="emit('select-chat', entry.chat_id)"
+                        >
                             <p
                                 class="truncate text-sm font-medium"
                                 :class="
@@ -442,16 +486,72 @@ watch(
                                     )
                                 }}
                             </p>
-                        </div>
+                        </button>
                         <span
                             v-if="isActiveHistoryEntry(entry)"
                             class="shrink-0 text-xs font-medium text-primary"
                         >
                             Current
                         </span>
-                    </button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <button
+                                    type="button"
+                                    class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                    @click.stop
+                                >
+                                    <Ellipsis class="size-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    class="cursor-pointer"
+                                    @click="openDeleteDialog(entry)"
+                                >
+                                    <div
+                                        class="flex items-center gap-2 text-destructive"
+                                    >
+                                        <Trash class="size-4" />
+                                        Delete
+                                    </div>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </div>
         </template>
+
+        <Dialog :open="deleteDialogOpen" @update:open="handleDeleteDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Delete chat</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete
+                        <span class="font-medium text-foreground">
+                            {{ deletingChat?.title ?? 'this chat' }}
+                        </span>
+                        ? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2">
+                    <DialogClose as-child>
+                        <Button
+                            variant="secondary"
+                            @click="handleDeleteDialogOpen(false)"
+                        >
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        variant="destructive"
+                        :disabled="!deletingChat"
+                        @click="confirmDelete"
+                    >
+                        Delete
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </aside>
 </template>
