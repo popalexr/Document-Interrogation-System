@@ -1,4 +1,5 @@
 import json
+import base64
 
 from lib.r2_storage import get_r2_stream
 from lib.openai import OpenAIClient
@@ -26,7 +27,7 @@ def generate_editing_prompt(payload: EditPayload) -> dict:
                     {
                         "type": "input_file",
                         "filename": input_file["filename"],
-                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content'].decode('utf-8')}",
+                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content']}",
                     },
                     {
                         "type": "input_text",
@@ -115,6 +116,11 @@ def execute_code_in_docker(payload: dict) -> str:
     return output
 
 def _get_input_file(document_id: str) -> dict:
+    """
+    Retrieve the input file from R2 storage and return its content, filename, and MIME type.
+    The file content is returned as base64 encoded string to be compatible with the OpenAI API input format.
+    """
+
     document = uploads.get_document(document_id)
     stream = get_r2_stream(document["r2_key"])
 
@@ -122,7 +128,7 @@ def _get_input_file(document_id: str) -> dict:
     stream.close()
 
     return {
-        "content": file_bytes,
+        "content": base64.b64encode(file_bytes).decode("utf-8"),
         "filename": document["original_name"],
         "mime_type": document["mime_type"],
     }
