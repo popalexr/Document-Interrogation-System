@@ -2,8 +2,7 @@ version: "3.8"
 
 services:
   clamav:
-    image: clamav/clamav:latest
-    platform: linux/amd64
+    image: clamav/clamav-debian:latest
     container_name: clamav
     restart: unless-stopped
     ports:
@@ -13,7 +12,6 @@ services:
     environment:
       - CLAMD_CONF_MaxFileSize=100M
       - CLAMD_CONF_StreamMaxLength=100M
-
 
 volumes:
   clamav-db:
