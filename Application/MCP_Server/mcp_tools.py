@@ -86,6 +86,9 @@ def initialize_mcp(mcp_instance):
 
         output = execute_code_in_docker(code_payload)
 
+        if output == file_bytes:
+            raise RuntimeError("Edit produced no changes. The generated script could not apply the requested modifications.")
+
         stored_file_name = _resolve_saved_document_name(
             payload.get("prompt_output_file"),
             payload.get("output_file"),

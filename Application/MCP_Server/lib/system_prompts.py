@@ -89,7 +89,7 @@ Return only a valid JSON object with exactly these keys:
 - "packages": string, required, use "" if none
 - "output_file": string, required
 
-In JSON, the "requirements" field contains Python package requirements, example: "requirements": "PyMuPDF\npymupdf4llm"
+In JSON, the "requirements" field contains Python package requirements, being a requirements.txt file.
 
 In JSON, the "packages" field contains linux packages to install, if any, that are installed via apt-install.
 
@@ -98,17 +98,25 @@ RULES:
 2. The generated code must save the edited result to edit_plan["output_file"] exactly.
 3. The code must be directly derived from the provided edit_plan and must not invent extra edits.
 4. The code must be syntactically correct and executable in Python 3.11.
-5. If document_context indicates a PDF, you must use PyMuPDF and pymupdf4llm.
-6. For PDFs:
+5. For PDFs:
    - import fitz
    - import pymupdf4llm
    - inspect the PDF structure with pymupdf4llm before editing
    - use fitz for all write operations on the PDF
    - keep the output as a PDF
-7. For PDFs, the "requirements" field must include exact pinned versions for both PyMuPDF and pymupdf4llm.
-8. Prefer explicit helper functions and clear control flow over short clever code.
-9. If the plan contains uncertainty, the code should still attempt the requested edit in a robust way and raise a clear RuntimeError when the target cannot be located.
-10. Do not include markdown, code fences, explanations, or any text before or after the JSON object.
+6. For PDFs, the "requirements" field must include exact pinned versions for both PyMuPDF and pymupdf4llm.
+7. Prefer explicit helper functions and clear control flow over short clever code.
+8. If the plan contains uncertainty, the code must still run in best-effort mode:
+   - never intentionally crash the program because a target text was not found
+   - skip unmatched operations and continue with remaining operations
+   - keep a warnings list and print it at the end
+9. For text replacement operations, attempt at least two matching strategies before skipping:
+   - exact visible-text match
+   - normalized match (trimmed whitespace and collapsed internal spaces)
+10. Track an "applied_changes" counter in code. Increment when a write operation is actually applied.
+11. The program must always produce edit_plan["output_file"].
+12. If applied_changes is 0 at the end, raise RuntimeError with a clear message that no edits were applied.
+13. Do not include markdown, code fences, explanations, or any text before or after the JSON object.
 """
 
 TITLE_GENERATION_SYS_PROMPT = """
