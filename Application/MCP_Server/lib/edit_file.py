@@ -1,13 +1,12 @@
 import json
-import os
 
+from lib.r2_storage import get_r2_stream
 from lib.openai import OpenAIClient
-from lib.vector_stores import find_vector_store_by_name
-from lib.filecite_sanitizer import FileciteSanitizer
 from lib.payloads import EditPayload
 from lib.system_prompts import EDIT_SYS_PROMPT_GENERATE_EDITING_PROMPT
 from lib.system_prompts import EDIT_SYS_PROMPT_GENERATE_EDITING_CODE
 from lib.docker import run_container_with_files
+from lib.documents import uploads
 
 def generate_editing_prompt(payload: EditPayload) -> dict:
     """
@@ -15,36 +14,28 @@ def generate_editing_prompt(payload: EditPayload) -> dict:
     """
 
     client = OpenAIClient().get_client()
-    vector_store = find_vector_store_by_name("documents-" + payload.user_id)
-
-    if vector_store is None:
-        raise ValueError("Vector store for this user not found.")
+    input_file = _get_input_file(payload.document_id)
     
     response = client.responses.create(
         model="gpt-5.4",
-        tools=[
-            {
-                "type": "file_search",
-                "vector_store_ids": [vector_store.id],
-                "filters": {
-                    "type": "eq",
-                    "key": "document_id",
-                    "value": str(payload.document_id),
-                },
-            }
-        ],
         instructions=EDIT_SYS_PROMPT_GENERATE_EDITING_PROMPT,
         input=[
             {
                 "role": "user",
-                "content": payload.prompt,
+                "content": [
+                    {
+                        "type": "input_file",
+                        "filename": input_file["filename"],
+                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content'].decode('utf-8')}",
+                    },
+                    {
+                        "type": "input_text",
+                        "text": payload.prompt,
+                    }
+                ]
             }
         ],
     )
-
-    # sanitizer = FileciteSanitizer()
-
-    # final_response = sanitizer.sanitize(response.output_text)
 
     return {"prompt": response.output_text}
 
@@ -54,29 +45,25 @@ def generate_editing_code(payload: EditPayload) -> dict:
     """
 
     client = OpenAIClient().get_client()
-    vector_store = find_vector_store_by_name("documents-" + payload.user_id)
+    input_file = _get_input_file(payload.document_id)
 
-    if vector_store is None:
-        raise ValueError("Vector store for this user not found.")
-    
     response = client.responses.create(
         model="gpt-5.4",
-        tools=[
-            {
-                "type": "file_search",
-                "vector_store_ids": [vector_store.id],
-                "filters": {
-                    "type": "eq",
-                    "key": "document_id",
-                    "value": str(payload.document_id),
-                },
-            }
-        ],
         instructions=EDIT_SYS_PROMPT_GENERATE_EDITING_CODE,
         input=[
             {
                 "role": "user",
-                "content": payload.prompt,
+                "content": [
+                    {
+                        "type": "input_file",
+                        "filename": input_file["filename"],
+                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content'].decode('utf-8')}",
+                    },
+                    {
+                        "type": "input_text",
+                        "text": payload.prompt,
+                    }
+                ]
             }
         ],
     )
@@ -126,3 +113,16 @@ def execute_code_in_docker(payload: dict) -> str:
     )
     
     return output
+
+def _get_input_file(document_id: str) -> dict:
+    document = uploads.get_document(document_id)
+    stream = get_r2_stream(document["r2_key"])
+
+    file_bytes = stream.read()
+    stream.close()
+
+    return {
+        "content": file_bytes,
+        "filename": document["original_name"],
+        "mime_type": document["mime_type"],
+    }
