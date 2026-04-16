@@ -58,7 +58,7 @@ def generate_editing_code(payload: EditPayload) -> dict:
                     {
                         "type": "input_file",
                         "filename": input_file["filename"],
-                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content'].decode('utf-8')}",
+                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content']}",
                     },
                     {
                         "type": "input_text",
