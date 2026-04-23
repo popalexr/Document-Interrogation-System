@@ -69,11 +69,12 @@ RULES:
 2. For PDFs, choose operation types that match the user request, such as "replace_text", "add_text", "delete_pages", "insert_blank_page", "remove_image", or "other_pdf_edit".
 3. For PDFs, when editing existing content, prefer exact visible anchor text from the document in "search_text". Do not paraphrase it.
 4. For PDFs, include "page_number" or "page_numbers" when the retrieved content makes them identifiable; otherwise use null or [].
-5. Keep edits minimal and specific. Prefer targeted operations over broad rewrites.
-6. Set "instructions" to a concise technical summary that a code generator can follow.
-7. If the requested PDF edit cannot be grounded reliably in the retrieved content, still describe the intended operation, but make the uncertainty explicit in "notes" and in "instructions".
-8. Use the provided default_output_file unless the user explicitly requests another filename.
-9. Do not include markdown, code fences, or commentary.
+5. For PDFs, make sure the positions of edits are exactly grounded in the retrieved content. If the user request is vague, include that vagueness in the "notes" and "instructions".
+6. Keep edits minimal and specific. Prefer targeted operations over broad rewrites.
+7. Set "instructions" to a concise technical summary that a code generator can follow.
+8. If the requested PDF edit cannot be grounded reliably in the retrieved content, still describe the intended operation, but make the uncertainty explicit in "notes" and in "instructions".
+9. Use the provided default_output_file unless the user explicitly requests another filename.
+10. Do not include markdown, code fences, or commentary.
 """
 
 EDIT_SYS_PROMPT_GENERATE_EDITING_CODE = """

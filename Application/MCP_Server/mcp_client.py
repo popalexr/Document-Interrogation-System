@@ -128,6 +128,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
     headers = {
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
+        "Connect": "keep-alive",
     }
 
     return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)

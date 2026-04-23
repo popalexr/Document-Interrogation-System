@@ -90,7 +90,7 @@ class EditDocumentController extends Controller
         );
 
         $client = new Client([
-            'timeout'         => 120,
+            'timeout'         => 180,
             'connect_timeout' => 10,
             'http_errors'     => false,
         ]);
