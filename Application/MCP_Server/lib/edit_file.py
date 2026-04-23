@@ -8,7 +8,7 @@ from lib.payloads import EditPayload
 from lib.system_prompts import EDIT_SYS_PROMPT_GENERATE_EDITING_PROMPT
 from lib.system_prompts import EDIT_SYS_PROMPT_GENERATE_EDITING_CODE
 from lib.docker import run_container_with_files
-from lib.documents import uploads
+from lib.documents import uploads, edits
 
 def generate_editing_prompt(payload: EditPayload) -> dict:
     """
@@ -56,13 +56,15 @@ def generate_editing_code(payload: EditPayload) -> dict:
     client = OpenAIClient().get_client()
     input_file = _get_input_file(payload.document_id)
 
+    chat_history = _get_chat_history(payload)
+
     response = client.responses.create(
         model="gpt-5.4",
         instructions=EDIT_SYS_PROMPT_GENERATE_EDITING_CODE,
         input=[
             {
                 "role": "user",
-                "content": [
+                "content": chat_history + [
                     {
                         "type": "input_file",
                         "filename": input_file["filename"],
@@ -266,3 +268,65 @@ def _get_input_file(document_id: str) -> dict:
         "filename": document["original_name"],
         "mime_type": document.get("mime_type") or "application/octet-stream",
     }
+
+def _get_edit_input_file(edit_document_id: str) -> dict:
+    """
+    Retrieve the input file for editing from R2 storage and return its content, filename, and MIME type.
+    The file content is returned as base64 encoded string to be compatible with the OpenAI API input format.
+    """
+
+    document = edits.get_document(edit_document_id)
+    stream = get_r2_stream(document["r2_key"])
+
+    file_bytes = stream.read()
+    stream.close()
+
+    return {
+        "content": base64.b64encode(file_bytes).decode("utf-8"),
+        "filename": document["original_name"],
+        "mime_type": document.get("mime_type") or "application/octet-stream",
+    }
+
+def _get_chat_history(payload: EditPayload) -> list[dict]:
+    """
+    Retrieve chat history for the given document and user.
+    """
+
+    chat_history = []
+
+    for message in payload.extra.get("history", []):
+        role = message.get("role")
+        content = message.get("content")
+        edit_document_id = message.get("edit_document_id", None)
+
+        if not (role and content):
+            continue
+
+        if role == 'assistant' and not edit_document_id:
+            chat_history.append({
+                "role": "assistant",
+                "content": reasoning,
+            })
+        elif role == 'assistant' and edit_document_id:
+            input_file = _get_edit_input_file(edit_document_id)
+            chat_history.append({
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "input_file",
+                        "filename": input_file["filename"],
+                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content']}",
+                    },
+                    {
+                        "type": "input_text",
+                        "text": f"User's technical details for the edit:\n\n{reasoning}",
+                    }
+                ]
+            })
+        elif role == 'user':
+            chat_history.append({
+                "role": "user",
+                "content": content,
+            })
+    
+    return chat_history

@@ -38,3 +38,22 @@ def store_document(
     
     # Return the ID of the newly created document
     return str(result.inserted_id)
+
+def get_document(document_id: str) -> dict:
+    """
+    Retrieve a document record from the database by its ID.
+    """
+    
+    # Get the "edits" collection
+    uploads_collection = client.get_collection("edits")
+    
+    # Find the document by its ID
+    document = uploads_collection.find_one({"_id": ObjectId(document_id)})
+    
+    if document is None:
+        raise ValueError(f"Document with ID {document_id} not found.")
+    
+    # Convert ObjectId to string for the returned document
+    document["_id"] = str(document["_id"])
+    
+    return document
