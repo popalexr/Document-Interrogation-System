@@ -68,7 +68,6 @@ const lineHeightPx = ref(0);
 const deleteDialogOpen = ref(false);
 const deletingChat = ref<ChatHistoryEntry | null>(null);
 
-const promptChips = ['Scrie mai formal', 'Rezumat', 'Corecteaza gramatical'];
 const maxRows = 4;
 
 const canSend = computed(
@@ -273,7 +272,7 @@ watch(
                         class="flex items-start justify-end gap-3"
                     >
                         <div
-                            class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 text-foreground"
+                            class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 text-foreground whitespace-pre-line"
                         >
                             {{ message.content }}
                         </div>
@@ -281,7 +280,7 @@ watch(
 
                     <div
                         v-if="message.role === 'assistant' && message.reasoning"
-                        class="flex items-start gap-3 py-3"
+                        class="flex items-start gap-3 py-3 hidden"
                     >
                         <Avatar
                             class="size-10 border border-primary/20 bg-primary/10"
@@ -303,7 +302,7 @@ watch(
                             </div>
 
                             <div
-                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground"
+                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground whitespace-pre-line"
                             >
                                 {{ message.reasoning }}
                             </div>
@@ -334,7 +333,7 @@ watch(
                             </div>
 
                             <div
-                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground"
+                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground whitespace-pre-line"
                             >
                                 {{ assistantContent(message) }}
                             </div>
@@ -416,19 +415,6 @@ watch(
                         <SendHorizontal class="size-4" />
                         {{ sending ? 'Sending...' : 'Send' }}
                     </Button>
-                </div>
-
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                        v-for="chip in promptChips"
-                        :key="chip"
-                        type="button"
-                        class="rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/70"
-                        :disabled="sending"
-                        @click="applyPromptChip(chip)"
-                    >
-                        {{ chip }}
-                    </button>
                 </div>
             </div>
         </template>
