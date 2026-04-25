@@ -125,7 +125,16 @@ function extColor(ext: string): string {
                               Interrogate
                           </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Link
+                          as="button"
+                          class="block w-full cursor-pointer text-left"
+                          :href="documents.edit.url({ query: { id: fileId } })"
+                          prefetch
+                        >
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
