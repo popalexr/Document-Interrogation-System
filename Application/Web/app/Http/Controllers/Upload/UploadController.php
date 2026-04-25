@@ -24,7 +24,7 @@ class UploadController extends Controller
         $file = $request['file'];
 
         $originalName = $file->getClientOriginalName();
-        $mime = $file->getClientMimeType();
+        $mime = $this->resolveMimeType($file);
         $size = $file->getSize();
         $checksum = hash_file('sha256', $file->getRealPath());
 
@@ -90,6 +90,25 @@ class UploadController extends Controller
             'status' => $status,
             'meta' => $meta,
         ]);
+    }
+
+    private function resolveMimeType($file): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        $mimeByExtension = [
+            'md'       => 'text/markdown',
+            'markdown' => 'text/markdown',
+            'mkd'      => 'text/markdown',
+        ];
+
+        if (isset($mimeByExtension[$extension])) {
+            return $mimeByExtension[$extension];
+        }
+
+        return $file->getMimeType()
+            ?: $file->getClientMimeType()
+            ?: 'application/octet-stream';
     }
 }
 
