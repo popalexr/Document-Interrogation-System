@@ -13,6 +13,12 @@ import DropdownMenuContent from '@/components/ui/dropdown-menu/DropdownMenuConte
 import DropdownMenuItem from '@/components/ui/dropdown-menu/DropdownMenuItem.vue';
 import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue';
 import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupInput,
+} from '@/components/ui/input-group';
+import Label from '@/components/ui/label/Label.vue';
+import {
     Bot,
     Ellipsis,
     Paperclip,
@@ -48,6 +54,7 @@ const props = defineProps<{
     previewDocumentId: string;
     originalDocumentId: string;
     documentName: string;
+    documentMimeType?: string;
 }>();
 
 const emit = defineEmits<{
@@ -59,6 +66,8 @@ const emit = defineEmits<{
     (e: 'reset-preview'): void;
     (e: 'open-document', documentId: string): void;
     (e: 'delete-chat', chatId: string): void;
+    (e: 'override-edited', documentId: string): void;
+    (e: 'save-as-new', payload: { documentId: string; name: string }): void;
 }>();
 
 const activeTab = ref<EditorTab>('chat');
@@ -67,6 +76,10 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
 const deleteDialogOpen = ref(false);
 const deletingChat = ref<ChatHistoryEntry | null>(null);
+const saveDialogOpen = ref(false);
+const saveAsDialogOpen = ref(false);
+const savingDocumentId = ref('');
+const newFileName = ref('');
 
 const maxRows = 4;
 
@@ -113,9 +126,92 @@ const formatTimestamp = (value?: string | Date | null) => {
 };
 
 const historyEntries = computed<ChatHistoryEntry[]>(() => props.chats);
+const newFileType = computed(() => {
+    const extension = props.documentName.split('.').pop();
+
+    if (extension && extension !== props.documentName) {
+        return extension.toLowerCase();
+    }
+
+    const mimeSubtype = props.documentMimeType?.split('/').pop();
+
+    if (!mimeSubtype) {
+        return 'file';
+    }
+
+    return (
+        mimeSubtype
+            .replace(/^x-/, '')
+            .replace(/^vnd\./, '')
+            .split(/[.+-]/)
+            .pop()
+            ?.toLowerCase() ?? 'file'
+    );
+});
 
 const isActiveHistoryEntry = (entry: ChatHistoryEntry) =>
     entry.chat_id === props.activeChatId;
+
+const openSaveDialog = (documentId: string) => {
+    if (!documentId) {
+        return;
+    }
+
+    savingDocumentId.value = documentId;
+    saveDialogOpen.value = true;
+};
+
+const handleSaveDialogOpen = (open: boolean) => {
+    saveDialogOpen.value = open;
+
+    if (!open && !saveAsDialogOpen.value) {
+        savingDocumentId.value = '';
+    }
+};
+
+const handleSaveAsDialogOpen = (open: boolean) => {
+    saveAsDialogOpen.value = open;
+
+    if (!open) {
+        newFileName.value = '';
+
+        if (!saveDialogOpen.value) {
+            savingDocumentId.value = '';
+        }
+    }
+};
+
+const openSaveAsDialog = () => {
+    saveDialogOpen.value = false;
+    saveAsDialogOpen.value = true;
+};
+
+const closeSaveAsDialog = () => {
+    handleSaveAsDialogOpen(false);
+};
+
+const submitOverride = () => {
+    if (!savingDocumentId.value) {
+        return;
+    }
+
+    emit('override-edited', savingDocumentId.value);
+    handleSaveDialogOpen(false);
+};
+
+const submitSaveAs = () => {
+    const name = newFileName.value.trim();
+
+    if (!name || !savingDocumentId.value) {
+        return;
+    }
+
+    emit('save-as-new', {
+        documentId: savingDocumentId.value,
+        name,
+    });
+    closeSaveAsDialog();
+};
 
 const openDeleteDialog = (entry: ChatHistoryEntry) => {
     deletingChat.value = entry;
@@ -272,7 +368,7 @@ watch(
                         class="flex items-start justify-end gap-3"
                     >
                         <div
-                            class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 text-foreground whitespace-pre-line"
+                            class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 whitespace-pre-line text-foreground"
                         >
                             {{ message.content }}
                         </div>
@@ -280,7 +376,7 @@ watch(
 
                     <div
                         v-if="message.role === 'assistant' && message.reasoning"
-                        class="flex items-start gap-3 py-3 hidden"
+                        class="flex hidden items-start gap-3 py-3"
                     >
                         <Avatar
                             class="size-10 border border-primary/20 bg-primary/10"
@@ -302,7 +398,7 @@ watch(
                             </div>
 
                             <div
-                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground whitespace-pre-line"
+                                class="space-y-3 px-4 py-4 leading-[1.65] whitespace-pre-line text-foreground"
                             >
                                 {{ message.reasoning }}
                             </div>
@@ -333,7 +429,7 @@ watch(
                             </div>
 
                             <div
-                                class="space-y-3 px-4 py-4 leading-[1.65] text-foreground whitespace-pre-line"
+                                class="space-y-3 px-4 py-4 leading-[1.65] whitespace-pre-line text-foreground"
                             >
                                 {{ assistantContent(message) }}
                             </div>
@@ -346,8 +442,7 @@ watch(
                                     size="sm"
                                     class="shadow-none"
                                     @click="
-                                        emit(
-                                            'open-document',
+                                        openSaveDialog(
                                             message.edit_document_id || '',
                                         )
                                     "
@@ -535,6 +630,74 @@ watch(
                         @click="confirmDelete"
                     >
                         Delete
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog :open="saveDialogOpen" @update:open="handleSaveDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Save change</DialogTitle>
+                    <DialogDescription>
+                        Choose how to save the edited version of this file.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid grid-cols-2 gap-3">
+                    <Button
+                        variant="outline"
+                        class="h-auto justify-center px-4 py-3 text-center"
+                        :disabled="!savingDocumentId"
+                        @click="submitOverride"
+                    >
+                        Override file
+                    </Button>
+                    <Button
+                        variant="outline"
+                        class="h-auto justify-center px-4 py-3 text-center"
+                        :disabled="!savingDocumentId"
+                        @click="openSaveAsDialog"
+                    >
+                        Save as new file
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog :open="saveAsDialogOpen" @update:open="handleSaveAsDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Save as new file</DialogTitle>
+                    <DialogDescription>
+                        Name the new file before saving this edited version.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-4">
+                    <div class="grid gap-2">
+                        <Label for="new-file-name">New name</Label>
+                        <InputGroup>
+                            <InputGroupInput
+                                id="new-file-name"
+                                v-model="newFileName"
+                                placeholder="Enter file name"
+                            />
+                            <InputGroupAddon align="inline-end">
+                                .{{ newFileType }}
+                            </InputGroupAddon>
+                        </InputGroup>
+                    </div>
+                </div>
+                <DialogFooter class="gap-2">
+                    <DialogClose as-child>
+                        <Button variant="secondary" @click="closeSaveAsDialog">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        :disabled="!newFileName.trim() || !savingDocumentId"
+                        @click="submitSaveAs"
+                    >
+                        Save
                     </Button>
                 </DialogFooter>
             </DialogContent>

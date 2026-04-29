@@ -36,6 +36,11 @@ type ChatListEntry = {
     updated_at?: string | Date | null;
 };
 
+type SaveAsNewPayload = {
+    documentId: string;
+    name: string;
+};
+
 const page = usePage();
 
 const normalizeMessage = (raw: unknown): ChatMessage => {
@@ -75,30 +80,30 @@ const normalizeChatsList = (raw: unknown): ChatListEntry[] => {
         return [];
     }
 
-    return raw
-        .map((item) => {
-            const chat = (item ?? {}) as Record<string, unknown>;
+    return raw.reduce<ChatListEntry[]>((chats, item) => {
+        const chat = (item ?? {}) as Record<string, unknown>;
 
-            if (typeof chat.chat_id !== 'string' || chat.chat_id.length === 0) {
-                return null;
-            }
+        if (typeof chat.chat_id !== 'string' || chat.chat_id.length === 0) {
+            return chats;
+        }
 
-            return {
-                chat_id: chat.chat_id,
-                title: typeof chat.title === 'string' ? chat.title : null,
-                created_at:
-                    typeof chat.created_at === 'string' ||
-                    chat.created_at instanceof Date
-                        ? chat.created_at
-                        : null,
-                updated_at:
-                    typeof chat.updated_at === 'string' ||
-                    chat.updated_at instanceof Date
-                        ? chat.updated_at
-                        : null,
-            };
-        })
-        .filter((chat): chat is ChatListEntry => chat !== null);
+        chats.push({
+            chat_id: chat.chat_id,
+            title: typeof chat.title === 'string' ? chat.title : null,
+            created_at:
+                typeof chat.created_at === 'string' ||
+                chat.created_at instanceof Date
+                    ? chat.created_at
+                    : null,
+            updated_at:
+                typeof chat.updated_at === 'string' ||
+                chat.updated_at instanceof Date
+                    ? chat.updated_at
+                    : null,
+        });
+
+        return chats;
+    }, []);
 };
 
 const latestEditedDocumentId = (messages: ChatMessage[]): string | null => {
@@ -295,6 +300,37 @@ const openEditedDocument = (documentId: string) => {
     }
 
     router.visit(viewDocument.url({ query: { id: documentId } }));
+};
+
+const confirmSaveAs = ({ documentId, name }: SaveAsNewPayload) => {
+    const fileName = name.trim();
+
+    if (!documentId || !fileName) {
+        return;
+    }
+
+    router.visit('/files/save-as-new', {
+        method: 'post',
+        data: {
+            file_id: documentId,
+            name: fileName,
+        },
+        preserveScroll: true,
+    });
+};
+
+const confirmOverride = (documentId: string) => {
+    if (!documentId) {
+        return;
+    }
+
+    router.visit('/files/override-edited', {
+        method: 'post',
+        data: {
+            file_id: documentId,
+        },
+        preserveScroll: true,
+    });
 };
 
 const openNewChat = () => {
@@ -639,6 +675,7 @@ async function sendMessage() {
                     :preview-document-id="previewDocumentId || sourceDocumentId"
                     :original-document-id="sourceDocumentId"
                     :document-name="documentName"
+                    :document-mime-type="documentMimeType"
                     @update:prompt="prompt = $event"
                     @submit="sendMessage"
                     @new-chat="openNewChat"
@@ -647,6 +684,8 @@ async function sendMessage() {
                     @reset-preview="resetPreviewDocument"
                     @open-document="openEditedDocument"
                     @delete-chat="deleteChat"
+                    @override-edited="confirmOverride"
+                    @save-as-new="confirmSaveAs"
                 />
             </div>
         </div>
