@@ -56,15 +56,13 @@ def generate_editing_code(payload: EditPayload) -> dict:
     client = OpenAIClient().get_client()
     input_file = _get_input_file(payload.document_id)
 
-    chat_history = _get_chat_history(payload)
-
     response = client.responses.create(
         model="gpt-5.4",
         instructions=EDIT_SYS_PROMPT_GENERATE_EDITING_CODE,
         input=[
             {
                 "role": "user",
-                "content": chat_history + [
+                "content": [
                     {
                         "type": "input_file",
                         "filename": input_file["filename"],
@@ -286,47 +284,3 @@ def _get_edit_input_file(edit_document_id: str) -> dict:
         "filename": document["original_name"],
         "mime_type": document.get("mime_type") or "application/octet-stream",
     }
-
-def _get_chat_history(payload: EditPayload) -> list[dict]:
-    """
-    Retrieve chat history for the given document and user.
-    """
-
-    chat_history = []
-
-    for message in payload.extra.get("history", []):
-        role = message.get("role")
-        content = message.get("content")
-        edit_document_id = message.get("edit_document_id", None)
-
-        if not (role and content):
-            continue
-
-        if role == 'assistant' and not edit_document_id:
-            chat_history.append({
-                "role": "assistant",
-                "content": reasoning,
-            })
-        elif role == 'assistant' and edit_document_id:
-            input_file = _get_edit_input_file(edit_document_id)
-            chat_history.append({
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "input_file",
-                        "filename": input_file["filename"],
-                        "file_data": f"data:{input_file['mime_type']};base64,{input_file['content']}",
-                    },
-                    {
-                        "type": "input_text",
-                        "text": f"User's technical details for the edit:\n\n{reasoning}",
-                    }
-                ]
-            })
-        elif role == 'user':
-            chat_history.append({
-                "role": "user",
-                "content": content,
-            })
-    
-    return chat_history
