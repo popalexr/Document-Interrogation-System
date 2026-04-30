@@ -2,13 +2,11 @@
 import api from '@/routes/api';
 import { computed } from 'vue';
 
-import DocPreview from '@/components/renderers/DocPreview.vue';
-import DocxPreview from '@/components/renderers/DocxPreview.vue';
+import CollaboraPreview from '@/components/renderers/CollaboraPreview.vue';
 import HtmlPreview from '@/components/renderers/HtmlPreview.vue';
 import JsonPreview from '@/components/renderers/JsonPreview.vue';
 import MarkdownPreview from '@/components/renderers/MarkdownPreview.vue';
 import PdfPreview from '@/components/renderers/PdfPreview.vue';
-import PptxPreview from '@/components/renderers/PptxPreview.vue';
 import TextPreview from '@/components/renderers/TextPreview.vue';
 
 type PreviewKind =
@@ -17,9 +15,7 @@ type PreviewKind =
     | 'markdown'
     | 'json'
     | 'html'
-    | 'docx'
-    | 'doc'
-    | 'pptx'
+    | 'collabora'
     | 'unknown';
 
 const props = defineProps<{
@@ -42,6 +38,22 @@ const fileUrl = computed(() => {
     ).toString();
 });
 
+const collaboraUrl = computed(() => {
+    if (!props.fileId || typeof window === 'undefined') {
+        return '';
+    }
+
+    const params = new URLSearchParams({
+        id: props.fileId,
+        source: props.isEditedFile ? 'edit' : 'upload',
+    });
+
+    return new URL(
+        `/collabora/preview?${params.toString()}`,
+        window.location.origin,
+    ).toString();
+});
+
 const ext = computed(() => {
     const parts = props.fileName.toLowerCase().split('.');
     return parts.length > 1 ? (parts.pop() ?? '') : '';
@@ -55,9 +67,22 @@ const kind = computed<PreviewKind>(() => {
     if (e === 'md') return 'markdown';
     if (e === 'json') return 'json';
     if (e === 'html' || e === 'htm') return 'html';
-    if (e === 'docx') return 'docx';
-    if (e === 'doc') return 'doc';
-    if (e === 'pptx') return 'pptx';
+    if (
+        [
+            'doc',
+            'docx',
+            'odt',
+            'rtf',
+            'ppt',
+            'pptx',
+            'odp',
+            'xls',
+            'xlsx',
+            'ods',
+            'csv',
+        ].includes(e)
+    )
+        return 'collabora';
 
     if (props.mimeType?.includes('text')) return 'text';
     if (props.mimeType === 'application/json') return 'json';
@@ -103,23 +128,10 @@ const kind = computed<PreviewKind>(() => {
             :url="fileUrl"
         />
 
-        <DocxPreview
-            v-else-if="kind === 'docx'"
+        <CollaboraPreview
+            v-else-if="kind === 'collabora'"
             class="h-full"
-            :url="fileUrl"
-        />
-
-        <DocPreview
-            v-else-if="kind === 'doc'"
-            class="h-full"
-            :doc-url="fileUrl"
-        />
-
-        <PptxPreview
-            v-else-if="kind === 'pptx'"
-            class="h-full"
-            :pptx-url="fileUrl"
-            :file-name="fileName"
+            :url="collaboraUrl"
         />
 
         <div

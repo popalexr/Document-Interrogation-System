@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'collabora' => [
+        'public_url' => env('COLLABORA_PUBLIC_URL', 'http://localhost:9980'),
+        'wopi_url' => env('COLLABORA_WOPI_URL', env('APP_URL', 'http://localhost')),
+        'access_token_ttl' => (int) env('COLLABORA_ACCESS_TOKEN_TTL', 3600),
+    ],
+
 ];
