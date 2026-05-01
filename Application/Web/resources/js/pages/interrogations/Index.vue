@@ -287,6 +287,34 @@ function openChat(nextChatId: string): void {
     });
 }
 
+function generateTitle(prompt: string, nextChatId: string): void {
+    if (!prompt || !sending.value) return;
+
+    fetch('/api/generate_title', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken() || '',
+        },
+        body: JSON.stringify({ query: prompt, chat_id: nextChatId }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (!data.title) return;
+
+            chatsList.value = chatsList.value.map((chat) => {
+                if (chat.chat_id === nextChatId) {
+                    return { ...chat, title: data.title };
+                }
+
+                return chat;
+            });
+        })
+        .catch((error) => {
+            console.error('Error generating title:', error);
+        });
+}
+
 function openNewChat(): void {
     router.visit('/interrogations', {
         method: 'get',
@@ -466,6 +494,17 @@ async function sendMessage(): Promise<void> {
                         '',
                         `/interrogations?id=${payload.chatId}`,
                     );
+
+                    if (payload.newChat) {
+                        chatsList.value.unshift({
+                            chat_id: payload.chatId,
+                            title: 'Untitled chat',
+                            document_count: selectedDocumentIds.value.length,
+                            updated_at: new Date(),
+                        });
+
+                        generateTitle(question, payload.chatId);
+                    }
                 }
 
                 scrollToBottom();
