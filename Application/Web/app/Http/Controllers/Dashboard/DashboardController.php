@@ -27,14 +27,13 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'uploads' => $uploads,
-            'showUploadButton' => true,
         ]);
     }
 
     /**
      * Get the user's uploads.
      */
-    private function getUserUploads() : Collection
+    private function getUserUploads(): Collection
     {
         if (!$this->request->user()) {
             return collect();
@@ -45,7 +44,16 @@ class DashboardController extends Controller
             ->whereNull('deleted_at')
             ->orderByDesc('created_at')
             ->limit(100)
-            ->get(['_id', 'original_name', 'mime_type', 'size', 'status', 'r2_key', 'created_at'])
+            ->get([
+                '_id',
+                'original_name',
+                'mime_type',
+                'size',
+                'status',
+                'r2_key',
+                'created_at',
+                'updated_at',
+            ])
             ->map(function ($u) {
                 return [
                     '_id' => (string) $u->_id,
@@ -55,8 +63,8 @@ class DashboardController extends Controller
                     'status' => (string) $u->status,
                     'r2_key' => (string) $u->r2_key,
                     'created_at' => $u->created_at,
+                    'updated_at' => $u->updated_at,
                 ];
             });
     }
 }
-
