@@ -5,7 +5,7 @@ from typing import Generator
 from lib.filecite_sanitizer import FileciteSanitizer
 from lib.openai import OpenAIClient
 from lib.payloads import AIInterrogationPayload
-from lib.system_prompts import QUERY_SYS_PROMPT
+from lib.system_prompts import AI_INTERROGATION_SYS_PROMPT
 from lib.vector_stores import find_vector_store_by_name
 
 
@@ -38,7 +38,7 @@ def stream_ai_interrogation(payload: AIInterrogationPayload) -> Generator[dict, 
                 "filters": _document_filters(payload.documents_ids),
             }
         ],
-        instructions=QUERY_SYS_PROMPT,
+        instructions=AI_INTERROGATION_SYS_PROMPT,
         input=chat_history
         + [
             {

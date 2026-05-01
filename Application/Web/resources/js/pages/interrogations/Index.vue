@@ -3,17 +3,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { csrfToken } from '@/lib/utils';
 import { home as dashboard } from '@/routes/dashboard';
 import type { BreadcrumbItem } from '@/types';
 import { Icon as DocumentIcon } from '@iconify/vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     ChevronDown,
     FileText,
@@ -22,9 +30,10 @@ import {
     Plus,
     Search,
     SendHorizontal,
+    Trash,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 type UploadStatus = 'uploading' | 'uploaded' | 'failed' | 'quarantine' | string;
 
@@ -48,7 +57,8 @@ type ChatItem = {
 type ChatMessage = {
     role: 'user' | 'assistant';
     content: string;
-    at: Date;
+    at: Date | string;
+    loading?: boolean;
 };
 
 const page = usePage();
@@ -61,16 +71,29 @@ const breadcrumbs: BreadcrumbItem[] = [
 const documents = computed<DocumentItem[]>(
     () => ((page.props as any).documents ?? []) as DocumentItem[],
 );
-const chats = computed<ChatItem[]>(
-    () => ((page.props as any).chats ?? []) as ChatItem[],
+const chatsList = ref<ChatItem[]>(
+    ((page.props as any).chats ?? []) as ChatItem[],
 );
 
-const selectedDocumentIds = ref<string[]>([]);
+const selectedDocumentIds = ref<string[]>(
+    ((page.props as any).selected_documents_ids ?? []) as string[],
+);
 const documentPickerOpen = ref(false);
 const documentSearch = ref('');
 const input = ref('');
 const messages = ref<ChatMessage[]>([]);
 const chatContainer = ref<HTMLElement | null>(null);
+const chatId = ref(
+    ((page.props as any).chat_id ??
+        (page.props as any).interrogation_id ??
+        null) as string | null,
+);
+const sending = ref(false);
+const deleteDialogOpen = ref(false);
+const deleteAllChatsDialogOpen = ref(false);
+const deletingChat = ref<ChatItem | null>(null);
+const isDeleting = ref(false);
+const isDeletingAllChats = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const lineHeightPx = ref(0);
 const maxRows = 4;
@@ -102,7 +125,10 @@ const filteredDocuments = computed(() => {
 });
 
 const canSend = computed(
-    () => input.value.trim().length > 0 && selectedDocuments.value.length > 0,
+    () =>
+        input.value.trim().length > 0 &&
+        selectedDocuments.value.length > 0 &&
+        !sending.value,
 );
 
 function fileExt(document: DocumentItem | null | undefined): string {
@@ -149,6 +175,12 @@ function formatRelative(value: string | Date | undefined): string {
         month: 'short',
         day: 'numeric',
     });
+}
+
+function formatMessageTime(value: string | Date): string {
+    const date = typeof value === 'string' ? new Date(value) : value;
+
+    return date.toLocaleTimeString();
 }
 
 function documentIcon(document: DocumentItem): string {
@@ -229,7 +261,113 @@ function initializeTextareaSizing(): void {
     autoGrow();
 }
 
-function sendMessage(): void {
+function scrollToBottom(): void {
+    const el = chatContainer.value;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+    });
+}
+
+watch(
+    () => messages.value.length,
+    async () => {
+        await nextTick();
+        scrollToBottom();
+    },
+);
+
+function openChat(nextChatId: string): void {
+    router.visit('/interrogations', {
+        method: 'get',
+        data: { id: nextChatId },
+        preserveState: false,
+        replace: true,
+    });
+}
+
+function openNewChat(): void {
+    router.visit('/interrogations', {
+        method: 'get',
+        preserveState: false,
+        replace: true,
+    });
+}
+
+function deleteChat(nextChatId: string): void {
+    deletingChat.value =
+        chatsList.value.find((chat) => chat.chat_id === nextChatId) ?? null;
+    deleteDialogOpen.value = true;
+}
+
+function handleDeleteDialogOpen(open: boolean): void {
+    deleteDialogOpen.value = open;
+
+    if (!open) {
+        deletingChat.value = null;
+    }
+}
+
+function confirmDeleteChat(): void {
+    if (!deletingChat.value) return;
+
+    isDeleting.value = true;
+    const deletingChatId = deletingChat.value.chat_id;
+
+    router.post(
+        '/interrogations/delete',
+        { chat_id: deletingChatId },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                chatsList.value = chatsList.value.filter(
+                    (chat) => chat.chat_id !== deletingChatId,
+                );
+
+                if (chatId.value === deletingChatId) {
+                    openNewChat();
+                }
+            },
+            onFinish: () => {
+                isDeleting.value = false;
+                handleDeleteDialogOpen(false);
+            },
+        },
+    );
+}
+
+function deleteAllChats(): void {
+    deleteAllChatsDialogOpen.value = true;
+}
+
+function handleDeleteAllChatsDialogOpen(open: boolean): void {
+    deleteAllChatsDialogOpen.value = open;
+}
+
+function confirmDeleteAllChats(): void {
+    if (chatsList.value.length === 0) return;
+
+    isDeletingAllChats.value = true;
+
+    router.post(
+        '/interrogations/deleteAll',
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                chatsList.value = [];
+                openNewChat();
+            },
+            onFinish: () => {
+                isDeletingAllChats.value = false;
+                handleDeleteAllChatsDialogOpen(false);
+            },
+        },
+    );
+}
+
+async function sendMessage(): Promise<void> {
     const question = input.value.trim();
     if (!question || !canSend.value) return;
 
@@ -239,17 +377,161 @@ function sendMessage(): void {
         at: new Date(),
     });
 
+    messages.value.push({
+        role: 'assistant',
+        content: 'Thinking...',
+        at: new Date(),
+        loading: true,
+    });
+
+    const assistantMessage = messages.value[messages.value.length - 1];
+    let hasStarted = false;
+
     input.value = '';
+    sending.value = true;
 
     nextTick(() => {
         autoGrow();
-        const el = chatContainer.value;
-        if (el) el.scrollTop = el.scrollHeight;
+        scrollToBottom();
     });
+
+    try {
+        const response = await fetch('/interrogations', {
+            method: 'POST',
+            headers: {
+                Accept: 'text/event-stream',
+                'Content-Type': 'application/json',
+                ...(csrfToken() ? { 'X-CSRF-TOKEN': csrfToken() ?? '' } : {}),
+            },
+            body: JSON.stringify({
+                chat_id: chatId.value,
+                documents_ids: selectedDocumentIds.value,
+                query: question,
+            }),
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(
+                (data as any)?.message || `Request failed (${response.status})`,
+            );
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('No response body.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const handleEvent = (raw: string) => {
+            const line = raw.trim();
+            if (!line.startsWith('data:')) return;
+
+            const jsonPayload = line.replace(/^data:\s*/, '');
+            let payload: any = null;
+
+            try {
+                payload = JSON.parse(jsonPayload);
+            } catch {
+                return;
+            }
+
+            if (
+                payload?.type === 'chunk' &&
+                typeof payload.delta === 'string'
+            ) {
+                if (!hasStarted) {
+                    assistantMessage.content = '';
+                    hasStarted = true;
+                }
+
+                assistantMessage.content += payload.delta;
+                assistantMessage.at = new Date();
+                scrollToBottom();
+            } else if (payload?.type === 'done') {
+                if (typeof payload.answer === 'string') {
+                    assistantMessage.content = payload.answer;
+                }
+
+                assistantMessage.loading = false;
+                assistantMessage.at = new Date();
+
+                if (payload.chatId) {
+                    chatId.value = payload.chatId;
+                    window.history.replaceState(
+                        {},
+                        '',
+                        `/interrogations?id=${payload.chatId}`,
+                    );
+                }
+
+                scrollToBottom();
+            } else if (payload?.type === 'error') {
+                assistantMessage.content =
+                    payload.message ?? 'Error performing interrogation.';
+                assistantMessage.loading = false;
+                assistantMessage.at = new Date();
+                scrollToBottom();
+            }
+        };
+
+        const processBuffer = (flush = false) => {
+            let working = buffer;
+            const events = working.split(/\r?\n\r?\n/);
+            working = events.pop() ?? '';
+
+            for (const rawEvent of events) {
+                handleEvent(rawEvent);
+            }
+
+            if (flush && working.trim()) {
+                handleEvent(working);
+                working = '';
+            }
+
+            buffer = working;
+        };
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            processBuffer();
+        }
+
+        buffer += decoder.decode();
+        processBuffer(true);
+
+        if (!assistantMessage.content.trim()) {
+            assistantMessage.content = 'No answer returned.';
+            assistantMessage.at = new Date();
+        }
+    } catch (error: any) {
+        assistantMessage.content =
+            error?.message ?? 'Error performing interrogation.';
+        assistantMessage.loading = false;
+        assistantMessage.at = new Date();
+        scrollToBottom();
+    } finally {
+        assistantMessage.loading = false;
+        sending.value = false;
+    }
 }
 
 onMounted(() => {
+    messages.value = (
+        ((page.props as any).interrogations ?? []) as ChatMessage[]
+    ).map((message) => ({
+        ...message,
+        at: message.at ? new Date(message.at) : new Date(),
+    }));
+
     initializeTextareaSizing();
+    nextTick(scrollToBottom);
 });
 </script>
 
@@ -257,13 +539,15 @@ onMounted(() => {
     <Head title="Interrogate Documents" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <main class="flex h-full min-h-0 bg-background">
+        <main
+            class="layout-content-height flex min-h-0 overflow-hidden bg-background"
+        >
             <section
-                class="flex min-w-0 flex-1 flex-col border-r border-border px-8 pt-3 pb-6"
+                class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-r border-border px-8 pt-3 pb-6"
             >
                 <div
                     ref="chatContainer"
-                    class="min-h-0 flex-1 overflow-y-auto px-4"
+                    class="h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
                 >
                     <div
                         v-if="messages.length === 0"
@@ -303,13 +587,13 @@ onMounted(() => {
                                 {{ message.content }}
                             </p>
                             <div class="mt-2 text-[11px] opacity-70">
-                                {{ message.at.toLocaleTimeString() }}
+                                {{ formatMessageTime(message.at) }}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="mx-auto w-full max-w-5xl">
+                <div class="mx-auto w-full max-w-5xl shrink-0">
                     <div class="mb-2 flex flex-wrap items-center gap-2">
                         <Button
                             v-if="selectedDocuments.length === 0"
@@ -411,23 +695,50 @@ onMounted(() => {
             <aside class="hidden w-80 shrink-0 flex-col px-5 py-6 lg:flex">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">Your chats</h2>
-                    <button
-                        type="button"
-                        class="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
-                        aria-label="Chat options"
-                    >
-                        <MoreHorizontal class="size-5" />
-                    </button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <button
+                                type="button"
+                                class="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted"
+                                aria-label="Chat options"
+                            >
+                                <MoreHorizontal class="size-5" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                class="cursor-pointer"
+                                @click="openNewChat"
+                            >
+                                New chat
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                class="cursor-pointer text-destructive"
+                                :disabled="chatsList.length === 0"
+                                @click="deleteAllChats"
+                            >
+                                Clear all chats
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
 
                 <div class="mt-5 flex flex-col gap-3">
                     <div
-                        v-for="chat in chats"
+                        v-for="chat in chatsList"
                         :key="chat.chat_id"
-                        class="rounded-lg border bg-background p-4 shadow-xs"
+                        class="rounded-lg border bg-background p-4 shadow-xs transition hover:bg-muted/40"
+                        :class="{
+                            'border-primary/40 bg-muted/50':
+                                chat.chat_id === chatId,
+                        }"
                     >
                         <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
+                            <button
+                                type="button"
+                                class="min-w-0 flex-1 text-left"
+                                @click="openChat(chat.chat_id)"
+                            >
                                 <h3 class="truncate text-sm font-medium">
                                     {{ chat.title }}
                                 </h3>
@@ -440,19 +751,32 @@ onMounted(() => {
                                     }}
                                     - {{ formatRelative(chat.updated_at) }}
                                 </p>
-                            </div>
-                            <button
-                                type="button"
-                                class="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-muted"
-                                aria-label="Chat actions"
-                            >
-                                <MoreHorizontal class="size-4" />
                             </button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <button
+                                        type="button"
+                                        class="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+                                        aria-label="Chat actions"
+                                    >
+                                        <MoreHorizontal class="size-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        class="cursor-pointer text-destructive"
+                                        @click="deleteChat(chat.chat_id)"
+                                    >
+                                        <Trash class="mr-2 size-4" />
+                                        Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
 
                     <div
-                        v-if="chats.length === 0"
+                        v-if="chatsList.length === 0"
                         class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
                     >
                         No chats yet.
@@ -547,6 +871,73 @@ onMounted(() => {
                         </p>
                         <Button @click="documentPickerOpen = false">
                             Done
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                :open="deleteDialogOpen"
+                @update:open="handleDeleteDialogOpen"
+            >
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader class="space-y-2">
+                        <DialogTitle>Delete chat</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete
+                            <span class="font-medium text-foreground">
+                                {{ deletingChat?.title ?? 'this chat' }}
+                            </span>
+                            ? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button
+                                variant="secondary"
+                                @click="handleDeleteDialogOpen(false)"
+                            >
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            :disabled="!deletingChat || isDeleting"
+                            @click="confirmDeleteChat"
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                :open="deleteAllChatsDialogOpen"
+                @update:open="handleDeleteAllChatsDialogOpen"
+            >
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader class="space-y-2">
+                        <DialogTitle>Delete all chats</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete all AI Interrogation
+                            chats? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button
+                                variant="secondary"
+                                @click="handleDeleteAllChatsDialogOpen(false)"
+                            >
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            :disabled="isDeletingAllChats"
+                            @click="confirmDeleteAllChats"
+                        >
+                            Delete
                         </Button>
                     </DialogFooter>
                 </DialogContent>
