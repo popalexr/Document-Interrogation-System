@@ -125,7 +125,7 @@ def _get_chat_history(payload: QueryPayload) -> list[dict]:
 
     chat_history = []
 
-    for message in payload.extra.get("history", []):
+    for message in (payload.extra or {}).get("history", []):
         role = message.get("role")
         content = message.get("content")
         if role and content:

@@ -1,13 +1,16 @@
 import mimetypes
 import os
+import json
 from datetime import datetime
+
+from mcp.server.fastmcp import Context
 
 from lib.payloads import *
 from lib.vector_stores import *
 from lib.openai import OpenAIClient
 from lib.r2_storage import get_r2_stream, save_to_r2
-from lib.interrogation import collect_interrogation_answer
-from lib.all_docs_interrogation import collect_ai_interrogation_answer
+from lib.interrogation import stream_interrogation
+from lib.all_docs_interrogation import stream_ai_interrogation
 from lib.edit_file import generate_editing_prompt, generate_editing_code, execute_code_in_docker
 from lib.title_generation import generate_chat_title
 
@@ -32,23 +35,43 @@ def initialize_mcp(mcp_instance):
         return {"status": "ok"}
     
     @mcp.tool()
-    def query(payload: QueryPayload) -> dict:
+    async def query(payload: QueryPayload, ctx: Context) -> dict:
         """
         Query a document by its ID with a specific question.
         Payload must contain 'document_id', 'user_id' and 'question' keys.
         """
 
-        answer = collect_interrogation_answer(payload)
+        answer = ""
+        progress = 0
+
+        for event in stream_interrogation(payload):
+            if event.get("type") == "chunk":
+                progress += 1
+                answer += event.get("delta", "")
+                await ctx.report_progress(progress, message=json.dumps(event))
+            elif event.get("type") == "done":
+                answer = event.get("answer", answer)
+
         return {"answer": answer}
 
     @mcp.tool()
-    def ai_interrogation(payload: AIInterrogationPayload) -> dict:
+    async def ai_interrogation(payload: AIInterrogationPayload, ctx: Context) -> dict:
         """
         Query one or more documents with a specific question.
         Payload must contain 'documents_ids', 'user_id' and 'question' keys.
         """
 
-        answer = collect_ai_interrogation_answer(payload)
+        answer = ""
+        progress = 0
+
+        for event in stream_ai_interrogation(payload):
+            if event.get("type") == "chunk":
+                progress += 1
+                answer += event.get("delta", "")
+                await ctx.report_progress(progress, message=json.dumps(event))
+            elif event.get("type") == "done":
+                answer = event.get("answer", answer)
+
         return {"answer": answer}
 
     @mcp.tool()

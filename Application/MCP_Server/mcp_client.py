@@ -3,12 +3,11 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+from typing import Any
 
 import dotenv
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from lib.all_docs_interrogation import stream_ai_interrogation
-from lib.interrogation import stream_interrogation
 from lib.mcp_state import MCPState
 
 from lib.payloads import *
@@ -56,16 +55,16 @@ async def ping() -> dict[str, Any]:
 @app.post("/query", tags=["Query"])
 async def query(payload: QueryPayload):
     """
-    Query a document by its ID with a specific question, streaming tokens as they arrive.
+    Query a document by its ID with a specific question through the MCP server.
     """
 
-    def event_source():
+    async def event_source():
         try:
-            for event in stream_interrogation(payload):
-                yield f"data: {json.dumps(event)}\n\n"
+            async for event in mcp_state.stream_tool_events("query", {"payload": payload.model_dump()}):
+                yield _sse_event(event)
         except Exception as exc:
             error_event = {"type": "error", "message": str(exc)}
-            yield f"data: {json.dumps(error_event)}\n\n"
+            yield _sse_event(error_event)
 
     headers = {
         "Cache-Control": "no-cache",
@@ -77,16 +76,16 @@ async def query(payload: QueryPayload):
 @app.post("/ai_interrogation", tags=["AI Interrogation"])
 async def ai_interrogation(payload: AIInterrogationPayload):
     """
-    Query one or more documents with a specific question, streaming tokens as they arrive.
+    Query one or more documents with a specific question through the MCP server.
     """
 
-    def event_source():
+    async def event_source():
         try:
-            for event in stream_ai_interrogation(payload):
-                yield f"data: {json.dumps(event)}\n\n"
+            async for event in mcp_state.stream_tool_events("ai_interrogation", {"payload": payload.model_dump()}):
+                yield _sse_event(event)
         except Exception as exc:
             error_event = {"type": "error", "message": str(exc)}
-            yield f"data: {json.dumps(error_event)}\n\n"
+            yield _sse_event(error_event)
 
     headers = {
         "Cache-Control": "no-cache",
@@ -224,4 +223,12 @@ def _edit_status_event(status: str, message: str) -> str:
     Format the current document-editing state as an SSE event.
     """
 
-    return f"data: {json.dumps({'type': 'edit_status', 'status': status, 'message': message})}\n\n"
+    return _sse_event({"type": "edit_status", "status": status, "message": message})
+
+
+def _sse_event(event: dict[str, Any]) -> str:
+    """
+    Format an event as a server-sent event frame.
+    """
+
+    return f"data: {json.dumps(event)}\n\n"

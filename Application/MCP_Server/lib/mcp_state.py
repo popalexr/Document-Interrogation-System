@@ -3,7 +3,7 @@ import contextlib
 import os
 import sys
 import json
-from typing import Any, Dict, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, Optional
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -52,7 +52,12 @@ class MCPState:
                     await self._transport_cm.__aexit__(None, None, None)
                 self._transport_cm = None
 
-    async def call_tool(self, name: str, arguments: Dict[str, Any] | None = None) -> Any:
+    async def call_tool(
+        self,
+        name: str,
+        arguments: Dict[str, Any] | None = None,
+        progress_callback: Callable[[float, float | None, str | None], Awaitable[None]] | None = None,
+    ) -> Any:
         if self.session is None:
             raise RuntimeError("MCP session is not started")
 
@@ -65,8 +70,55 @@ class MCPState:
             # Proper FastAPI HTTPException signature
             raise HTTPException(status_code=404, detail=f"Tool '{name}' not found in MCP server")
 
-        result = await self.session.call_tool(name, arguments)
+        result = await self.session.call_tool(name, arguments, progress_callback=progress_callback)
 
+        return self._decode_tool_result(name, result)
+
+    async def stream_tool_events(
+        self,
+        name: str,
+        arguments: Dict[str, Any] | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+
+        async def on_progress(progress: float, total: float | None, message: str | None) -> None:
+            if not message:
+                return
+
+            try:
+                event = json.loads(message)
+            except json.JSONDecodeError:
+                event = {"type": "progress", "progress": progress, "total": total, "message": message}
+
+            if isinstance(event, dict):
+                await queue.put(event)
+
+        task = asyncio.create_task(self.call_tool(name, arguments, progress_callback=on_progress))
+
+        try:
+            while not task.done():
+                try:
+                    yield await asyncio.wait_for(queue.get(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    continue
+
+            while not queue.empty():
+                yield queue.get_nowait()
+
+            result = await task
+            answer = self._extract_answer(result)
+
+            if answer is not None:
+                yield {"type": "done", "answer": answer}
+            else:
+                yield {"type": "done", "result": result}
+        finally:
+            if not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+    def _decode_tool_result(self, name: str, result: Any) -> Any:
         structured_content = getattr(result, "structuredContent", None)
         is_error = bool(getattr(result, "isError", False))
 
@@ -103,3 +155,15 @@ class MCPState:
             return {"result": repr(result)}
         except Exception:
             raise
+
+    def _extract_answer(self, result: Any) -> str | None:
+        if isinstance(result, dict):
+            answer = result.get("answer")
+            if isinstance(answer, str):
+                return answer
+
+            fallback = result.get("result")
+            if isinstance(fallback, str):
+                return fallback
+
+        return None
