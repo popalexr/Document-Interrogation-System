@@ -25,11 +25,6 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'My Documents',
-        href: '#',
-        icon: Folder,
-    },
-    {
         title: 'AI Interrogations',
         href: '#',
         icon: BookOpen,

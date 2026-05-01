@@ -251,10 +251,6 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
             href: dashboard().url,
         },
         {
-            title: 'My Documents',
-            href: '#',
-        },
-        {
             title: documentName.value,
             href: sourceDocumentId.value
                 ? viewDocument.url({ query: { id: sourceDocumentId.value } })

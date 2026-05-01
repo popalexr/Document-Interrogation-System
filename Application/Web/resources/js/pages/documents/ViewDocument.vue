@@ -14,10 +14,6 @@ let breadcrumbs: BreadcrumbItem[] = [
     href: dashboard().url
   },
   {
-    title: 'My Documents',
-    href: '#',
-  },
-  {
     title: page.props.document.original_name,
     href: '#',
   }

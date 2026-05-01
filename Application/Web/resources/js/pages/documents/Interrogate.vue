@@ -31,10 +31,6 @@ let breadcrumbs = ref<BreadcrumbItem[]>([
     href: dashboard().url
   },
   {
-    title: 'My Documents',
-    href: '#',
-  },
-  {
     title: page.props.document.original_name,
     href: viewDocument.url({ query: { id: page.props.document._id } }),
   },
