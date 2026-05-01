@@ -45,8 +45,10 @@ import {
     CircleAlert,
     CircleDashed,
     Download,
+    Edit3,
     FileText,
     Info,
+    MessageSquareText,
     MoreVertical,
     Play,
     RefreshCcw,
@@ -303,6 +305,10 @@ function selectDocument(upload: UploadItem) {
     selectedDocumentId.value = upload._id;
 }
 
+function viewDocument(upload: UploadItem) {
+    router.visit(documents.view.url({ query: { id: upload._id } }));
+}
+
 function closeDetails() {
     selectedDocumentId.value = null;
 }
@@ -501,7 +507,7 @@ function confirmDelete() {
                             <UploadButton
                                 label="Upload Documents"
                                 variant="default"
-                                trigger-class="gap-2 bg-blue-600 hover:bg-blue-700"
+                                trigger-class="gap-2"
                             />
                         </div>
                     </div>
@@ -522,7 +528,7 @@ function confirmDelete() {
                             <div>Document</div>
                             <div>Type</div>
                             <div>Status</div>
-                            <div>Actions</div>
+                            <div class="text-center">Actions</div>
                         </div>
 
                         <div
@@ -546,6 +552,7 @@ function confirmDelete() {
                                                 upload._id,
                                         }"
                                         @click="selectDocument(upload)"
+                                        @dblclick="viewDocument(upload)"
                                     >
                                         <div>
                                             <input
@@ -630,7 +637,7 @@ function confirmDelete() {
                                         </div>
 
                                         <div
-                                            class="flex items-center gap-2"
+                                            class="flex items-center justify-end gap-2"
                                             @click.stop
                                         >
                                             <Button
@@ -747,6 +754,9 @@ function confirmDelete() {
                                                             "
                                                             prefetch
                                                         >
+                                                            <FileText
+                                                                class="mr-2 size-4"
+                                                            />
                                                             View
                                                         </Link>
                                                     </DropdownMenuItem>
@@ -767,8 +777,34 @@ function confirmDelete() {
                                                             target="_blank"
                                                             rel="noopener"
                                                         >
+                                                            <Download
+                                                                class="mr-2 size-4"
+                                                            />
                                                             Download
                                                         </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        :as-child="true"
+                                                    >
+                                                        <Link
+                                                            as="button"
+                                                            class="block w-full cursor-pointer text-left"
+                                                            :href="
+                                                                documents.interrogate.url(
+                                                                    {
+                                                                        query: {
+                                                                            id: upload._id,
+                                                                        },
+                                                                    },
+                                                                )
+                                                            "
+                                                            prefetch
+                                                        >
+                                                            <MessageSquareText
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            Interrogate
+                                                        </Link>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         :as-child="true"
@@ -787,6 +823,9 @@ function confirmDelete() {
                                                             "
                                                             prefetch
                                                         >
+                                                            <Edit3
+                                                                class="mr-2 size-4"
+                                                            />
                                                             Edit
                                                         </Link>
                                                     </DropdownMenuItem>
@@ -828,6 +867,7 @@ function confirmDelete() {
                                             "
                                             prefetch
                                         >
+                                            <FileText class="mr-2 size-4" />
                                             View
                                         </Link>
                                     </ContextMenuItem>
@@ -842,8 +882,26 @@ function confirmDelete() {
                                             target="_blank"
                                             rel="noopener"
                                         >
+                                            <Download class="mr-2 size-4" />
                                             Download
                                         </a>
+                                    </ContextMenuItem>
+                                    <ContextMenuItem :as-child="true">
+                                        <Link
+                                            as="button"
+                                            class="block w-full cursor-pointer text-left"
+                                            :href="
+                                                documents.interrogate.url({
+                                                    query: { id: upload._id },
+                                                })
+                                            "
+                                            prefetch
+                                        >
+                                            <MessageSquareText
+                                                class="mr-2 size-4"
+                                            />
+                                            Interrogate
+                                        </Link>
                                     </ContextMenuItem>
                                     <ContextMenuItem :as-child="true">
                                         <Link
@@ -856,6 +914,7 @@ function confirmDelete() {
                                             "
                                             prefetch
                                         >
+                                            <Edit3 class="mr-2 size-4" />
                                             Edit
                                         </Link>
                                     </ContextMenuItem>
@@ -932,7 +991,7 @@ function confirmDelete() {
                         <div class="grid grid-cols-2 gap-2">
                             <Button
                                 v-if="canAskAi(selectedDocument)"
-                                class="gap-2 bg-blue-600 hover:bg-blue-700"
+                                class="gap-2"
                                 as-child
                             >
                                 <Link
@@ -949,7 +1008,7 @@ function confirmDelete() {
                             </Button>
                             <Button
                                 v-else
-                                class="gap-2 bg-blue-600 hover:bg-blue-700"
+                                class="gap-2"
                                 disabled
                             >
                                 <Sparkles class="size-4" />
@@ -958,7 +1017,7 @@ function confirmDelete() {
 
                             <Button
                                 v-if="canAskAi(selectedDocument)"
-                                class="gap-2 bg-blue-600 hover:bg-blue-700"
+                                class="gap-2"
                                 as-child
                             >
                                 <Link
@@ -975,7 +1034,7 @@ function confirmDelete() {
                             </Button>
                             <Button
                                 v-else
-                                class="gap-2 bg-blue-600 hover:bg-blue-700"
+                                class="gap-2"
                                 disabled
                             >
                                 <FileText class="size-4" />
