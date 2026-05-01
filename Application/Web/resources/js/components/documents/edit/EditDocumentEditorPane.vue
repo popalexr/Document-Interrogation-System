@@ -2,7 +2,8 @@
 import EditFilePreview from '@/components/documents/edit/EditFilePreview.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
-import { Columns2, Download, Eye } from 'lucide-vue-next';
+import documents from '@/routes/documents';
+import { Download } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -18,6 +19,15 @@ const ext = computed(() => {
 });
 
 const label = computed(() => ext.value.toUpperCase() || 'FILE');
+
+const downloadUrl = computed(() =>
+    documents.downloadDocument.url({
+        query: {
+            id: props.fileId,
+            source: props.isEditedFile ? 'edit' : 'upload',
+        },
+    }),
+);
 
 function extColor(extension: string): string {
     switch (extension) {
@@ -56,17 +66,14 @@ function extColor(extension: string): string {
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <Button variant="outline" class="gap-2">
-                    <Eye class="size-4" />
-                    Preview
-                </Button>
-                <Button variant="outline" class="gap-2">
-                    <Columns2 class="size-4" />
-                    Split
-                </Button>
-                <Button variant="outline" class="gap-2">
+                <Button
+                    as="a"
+                    variant="outline"
+                    class="gap-2"
+                    :href="downloadUrl"
+                >
                     <Download class="size-4" />
-                    Export
+                    Download
                 </Button>
             </div>
         </div>

@@ -3,20 +3,34 @@
 namespace App\Http\Controllers\Files;
 
 use App\Http\Controllers\Controller;
+use App\Models\Edit;
 use App\Models\Upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class DownloadFileController extends Controller
 {
-    private ?Upload $file;
+    private Upload|Edit|null $file;
 
     private $storage;
 
     public function __construct(private Request $request)
     {
         $fileId = $this->request->get('id', null);
-        $this->file = $fileId ? Upload::find($fileId) : null;
+        $source = $this->request->get('source', 'upload');
+        $userId = (string) $this->request->user()?->getKey();
+
+        $this->file = match ($source) {
+            'edit' => $fileId ? Edit::query()
+                ->where('_id', $fileId)
+                ->where('user_id', $userId)
+                ->first() : null,
+            default => $fileId ? Upload::query()
+                ->where('_id', $fileId)
+                ->where('user_id', $userId)
+                ->whereNull('deleted_at')
+                ->first() : null,
+        };
 
         $this->storage = Storage::disk('r2');
     }
