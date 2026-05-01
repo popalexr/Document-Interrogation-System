@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -12,10 +11,11 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { home as dashboard } from '@/routes/dashboard';
+import { index as interrogations_index } from '@/routes/interrogations';
 import { index as trash_index } from '@/routes/trash';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, File, Folder, LayoutGrid, Star, Trash } from 'lucide-vue-next';
+import { BookOpen, File, LayoutGrid, Star, Trash } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -26,7 +26,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'AI Interrogations',
-        href: '#',
+        href: interrogations_index(),
         icon: BookOpen,
     },
     {
@@ -43,7 +43,7 @@ const mainNavItems: NavItem[] = [
         title: 'Trash',
         href: trash_index(),
         icon: Trash,
-    }
+    },
 ];
 
 const footerNavItems: NavItem[] = [];
