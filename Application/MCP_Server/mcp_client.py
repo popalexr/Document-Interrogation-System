@@ -7,6 +7,7 @@ import os
 import dotenv
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from lib.all_docs_interrogation import stream_ai_interrogation
 from lib.interrogation import stream_interrogation
 from lib.mcp_state import MCPState
 
@@ -61,6 +62,27 @@ async def query(payload: QueryPayload):
     def event_source():
         try:
             for event in stream_interrogation(payload):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            error_event = {"type": "error", "message": str(exc)}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+
+    return StreamingResponse(event_source(), media_type="text/event-stream", headers=headers)
+
+@app.post("/ai_interrogation", tags=["AI Interrogation"])
+async def ai_interrogation(payload: AIInterrogationPayload):
+    """
+    Query one or more documents with a specific question, streaming tokens as they arrive.
+    """
+
+    def event_source():
+        try:
+            for event in stream_ai_interrogation(payload):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as exc:
             error_event = {"type": "error", "message": str(exc)}

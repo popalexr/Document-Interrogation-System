@@ -8,4 +8,5 @@ return [
     'vectorize_endpoint' => env('MCP_VECTORIZATION_ENDPOINT', '/vectorize'),
     'delete_document_endpoint' => env('MCP_DELETE_DOCUMENT_ENDPOINT', '/delete_document'),
     'edit_document_endpoint' => env('MCP_EDIT_ENDPOINT', '/edit'),
+    'ai_interrogation_endpoint' => env('MCP_AI_INTERROGATION_ENDPOINT', '/ai_interrogation'),
 ];

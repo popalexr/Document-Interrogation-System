@@ -7,6 +7,7 @@ from lib.vector_stores import *
 from lib.openai import OpenAIClient
 from lib.r2_storage import get_r2_stream, save_to_r2
 from lib.interrogation import collect_interrogation_answer
+from lib.all_docs_interrogation import collect_ai_interrogation_answer
 from lib.edit_file import generate_editing_prompt, generate_editing_code, execute_code_in_docker
 from lib.title_generation import generate_chat_title
 
@@ -38,6 +39,16 @@ def initialize_mcp(mcp_instance):
         """
 
         answer = collect_interrogation_answer(payload)
+        return {"answer": answer}
+
+    @mcp.tool()
+    def ai_interrogation(payload: AIInterrogationPayload) -> dict:
+        """
+        Query one or more documents with a specific question.
+        Payload must contain 'documents_ids', 'user_id' and 'question' keys.
+        """
+
+        answer = collect_ai_interrogation_answer(payload)
         return {"answer": answer}
 
     @mcp.tool()
