@@ -352,7 +352,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <main
-            class="flex h-[calc(100dvh-3rem)] min-h-0 flex-col overflow-hidden bg-background px-6 py-6"
+            class="flex h-full min-h-0 flex-col overflow-hidden bg-background px-6 py-6"
         >
             <div class="flex min-h-0 flex-1 gap-6">
                 <section class="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -513,7 +513,7 @@ function confirmDelete() {
                     </div>
 
                     <div
-                        class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-xs"
+                        class="flex max-h-[42rem] flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-xs"
                     >
                         <div
                             class="grid h-10 shrink-0 grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b bg-muted/30 px-4 text-xs text-muted-foreground"
