@@ -65,7 +65,13 @@ const maxRows = 4;
 
 const documentInfo = computed<DocumentInfo | null>(() => (page.props as any).document ?? null);
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string; at: Date | string; loading?: boolean };
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  at: Date | string;
+  loading?: boolean;
+  typing?: boolean;
+};
 const messages = ref<ChatMessage[]>([]);
 const input = ref('');
 const sending = ref(false);
@@ -148,8 +154,101 @@ async function sendMessage() {
   // Use the reactive entry from the array so stream mutations repaint the UI.
   let assistantMessage: ChatMessage | null = messages.value[messages.value.length - 1] ?? null;
   let hasStarted = false;
+  let queuedText = '';
+  let typingTimer: ReturnType<typeof window.setTimeout> | null = null;
+  let resolveTypingIdle: (() => void) | null = null;
+  const typingSpeedMs = 18;
   input.value = '';
   sending.value = true;
+
+  const stopTypingAnimation = () => {
+    if (typingTimer !== null) {
+      window.clearTimeout(typingTimer);
+      typingTimer = null;
+    }
+
+    queuedText = '';
+
+    if (assistantMessage) {
+      assistantMessage.typing = false;
+    }
+
+    resolveTypingIdle?.();
+    resolveTypingIdle = null;
+  };
+
+  const markTypingIdle = () => {
+    if (!assistantMessage) return;
+
+    assistantMessage.typing = false;
+    typingTimer = null;
+    resolveTypingIdle?.();
+    resolveTypingIdle = null;
+  };
+
+  const typeNextCharacter = () => {
+    if (!assistantMessage) {
+      markTypingIdle();
+      return;
+    }
+
+    if (!queuedText.length) {
+      markTypingIdle();
+      return;
+    }
+
+    assistantMessage.content += queuedText.charAt(0);
+    queuedText = queuedText.slice(1);
+    assistantMessage.at = new Date();
+    assistantMessage.typing = true;
+    scrollToBottom();
+
+    typingTimer = window.setTimeout(typeNextCharacter, typingSpeedMs);
+  };
+
+  const enqueueAnimatedText = (text: string) => {
+    if (!assistantMessage || !text) return;
+
+    queuedText += text;
+    assistantMessage.typing = true;
+
+    if (typingTimer === null) {
+      typeNextCharacter();
+    }
+  };
+
+  const waitForTypingIdle = () => {
+    if (!typingTimer && !queuedText.length) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      resolveTypingIdle = resolve;
+    });
+  };
+
+  const reconcileFinalAnswer = (answer: string) => {
+    if (!assistantMessage) return;
+
+    const visibleOrQueuedAnswer = assistantMessage.content + queuedText;
+
+    if (!hasStarted) {
+      assistantMessage.content = '';
+      hasStarted = true;
+      enqueueAnimatedText(answer);
+      return;
+    }
+
+    if (answer.startsWith(visibleOrQueuedAnswer)) {
+      enqueueAnimatedText(answer.slice(visibleOrQueuedAnswer.length));
+      return;
+    }
+
+    if (visibleOrQueuedAnswer.trim() === answer.trim()) return;
+
+    stopTypingAnimation();
+    assistantMessage.content = answer;
+  };
 
   try {
     if (!assistantMessage) {
@@ -200,17 +299,17 @@ async function sendMessage() {
       if (payload?.type === 'chunk' && typeof payload.delta === 'string') {
         if (!hasStarted) {
           assistantMessage.content = '';
+          assistantMessage.loading = false;
           hasStarted = true;
         }
-        assistantMessage.content += payload.delta;
+        enqueueAnimatedText(payload.delta);
         assistantMessage.at = new Date();
         scrollToBottom();
       }
       else if (payload?.type === 'done') {
         if (typeof payload.answer === 'string') {
-          assistantMessage.content = payload.answer;
+          reconcileFinalAnswer(payload.answer);
         }
-        assistantMessage.loading = false;
         assistantMessage.at = new Date();
 
         if (payload.newChat && payload.chatId) {
@@ -232,8 +331,10 @@ async function sendMessage() {
         }
         scrollToBottom();
       } else if (payload?.type === 'error') {
+        stopTypingAnimation();
         assistantMessage.content = payload.message ?? 'Error performing interrogation.';
         assistantMessage.loading = false;
+        assistantMessage.typing = false;
         assistantMessage.at = new Date();
       }
     };
@@ -264,19 +365,28 @@ async function sendMessage() {
 
     buffer += decoder.decode();
     processBuffer(true);
+    await waitForTypingIdle();
 
     if (!assistantMessage.content.trim()) {
       assistantMessage.content = 'No answer returned.';
       assistantMessage.at = new Date();
     }
+    assistantMessage.loading = false;
+    assistantMessage.typing = false;
   } catch (e: any) {
+    stopTypingAnimation();
     if (assistantMessage) {
       assistantMessage.content = e?.message ?? 'Error performing interrogation.';
       assistantMessage.loading = false;
+      assistantMessage.typing = false;
       assistantMessage.at = new Date();
     }
     scrollToBottom();
   } finally {
+    if (assistantMessage) {
+      assistantMessage.loading = false;
+      assistantMessage.typing = false;
+    }
     sending.value = false;
   }
 }
@@ -484,6 +594,11 @@ onMounted(() => {
                                                 size="sm"
                                                 class="shrink-0 inline-block align-middle"
                                             />
+                                            <span
+                                                v-else-if="m.role === 'assistant' && m.typing"
+                                                class="typing-cursor"
+                                                aria-hidden="true"
+                                            ></span>
                                         </span>
                                         <div class="mt-1 text-[10px] opacity-70" :class="{'flex justify-end': (m.role === 'user')}">{{ new Date(m.at).toLocaleTimeString() }}</div>
                                     </div>
@@ -637,3 +752,27 @@ onMounted(() => {
             </Dialog>
     </AppLayout>
 </template>
+
+<style scoped>
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1rem;
+  margin-left: 2px;
+  background: currentColor;
+  animation: typing-cursor-blink 0.8s infinite;
+  vertical-align: -0.125em;
+}
+
+@keyframes typing-cursor-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+</style>

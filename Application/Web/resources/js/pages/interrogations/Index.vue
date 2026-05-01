@@ -59,6 +59,7 @@ type ChatMessage = {
     content: string;
     at: Date | string;
     loading?: boolean;
+    typing?: boolean;
 };
 
 const page = usePage();
@@ -414,9 +415,90 @@ async function sendMessage(): Promise<void> {
 
     const assistantMessage = messages.value[messages.value.length - 1];
     let hasStarted = false;
+    let queuedText = '';
+    let typingTimer: ReturnType<typeof window.setTimeout> | null = null;
+    let resolveTypingIdle: (() => void) | null = null;
+    const typingSpeedMs = 18;
 
     input.value = '';
     sending.value = true;
+
+    const stopTypingAnimation = () => {
+        if (typingTimer !== null) {
+            window.clearTimeout(typingTimer);
+            typingTimer = null;
+        }
+
+        queuedText = '';
+        assistantMessage.typing = false;
+        resolveTypingIdle?.();
+        resolveTypingIdle = null;
+    };
+
+    const markTypingIdle = () => {
+        assistantMessage.typing = false;
+        typingTimer = null;
+        resolveTypingIdle?.();
+        resolveTypingIdle = null;
+    };
+
+    const typeNextCharacter = () => {
+        if (!queuedText.length) {
+            markTypingIdle();
+            return;
+        }
+
+        assistantMessage.content += queuedText.charAt(0);
+        queuedText = queuedText.slice(1);
+        assistantMessage.at = new Date();
+        assistantMessage.typing = true;
+        scrollToBottom();
+
+        typingTimer = window.setTimeout(typeNextCharacter, typingSpeedMs);
+    };
+
+    const enqueueAnimatedText = (text: string) => {
+        if (!text) return;
+
+        queuedText += text;
+        assistantMessage.typing = true;
+
+        if (typingTimer === null) {
+            typeNextCharacter();
+        }
+    };
+
+    const waitForTypingIdle = () => {
+        if (!typingTimer && !queuedText.length) {
+            return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve) => {
+            resolveTypingIdle = resolve;
+        });
+    };
+
+    const reconcileFinalAnswer = (answer: string) => {
+        const visibleOrQueuedAnswer = assistantMessage.content + queuedText;
+
+        if (!hasStarted) {
+            assistantMessage.content = '';
+            assistantMessage.loading = false;
+            hasStarted = true;
+            enqueueAnimatedText(answer);
+            return;
+        }
+
+        if (answer.startsWith(visibleOrQueuedAnswer)) {
+            enqueueAnimatedText(answer.slice(visibleOrQueuedAnswer.length));
+            return;
+        }
+
+        if (visibleOrQueuedAnswer.trim() === answer.trim()) return;
+
+        stopTypingAnimation();
+        assistantMessage.content = answer;
+    };
 
     nextTick(() => {
         autoGrow();
@@ -473,18 +555,18 @@ async function sendMessage(): Promise<void> {
             ) {
                 if (!hasStarted) {
                     assistantMessage.content = '';
+                    assistantMessage.loading = false;
                     hasStarted = true;
                 }
 
-                assistantMessage.content += payload.delta;
+                enqueueAnimatedText(payload.delta);
                 assistantMessage.at = new Date();
                 scrollToBottom();
             } else if (payload?.type === 'done') {
                 if (typeof payload.answer === 'string') {
-                    assistantMessage.content = payload.answer;
+                    reconcileFinalAnswer(payload.answer);
                 }
 
-                assistantMessage.loading = false;
                 assistantMessage.at = new Date();
 
                 if (payload.chatId) {
@@ -509,9 +591,11 @@ async function sendMessage(): Promise<void> {
 
                 scrollToBottom();
             } else if (payload?.type === 'error') {
+                stopTypingAnimation();
                 assistantMessage.content =
                     payload.message ?? 'Error performing interrogation.';
                 assistantMessage.loading = false;
+                assistantMessage.typing = false;
                 assistantMessage.at = new Date();
                 scrollToBottom();
             }
@@ -544,19 +628,25 @@ async function sendMessage(): Promise<void> {
 
         buffer += decoder.decode();
         processBuffer(true);
+        await waitForTypingIdle();
 
         if (!assistantMessage.content.trim()) {
             assistantMessage.content = 'No answer returned.';
             assistantMessage.at = new Date();
         }
+        assistantMessage.loading = false;
+        assistantMessage.typing = false;
     } catch (error: any) {
+        stopTypingAnimation();
         assistantMessage.content =
             error?.message ?? 'Error performing interrogation.';
         assistantMessage.loading = false;
+        assistantMessage.typing = false;
         assistantMessage.at = new Date();
         scrollToBottom();
     } finally {
         assistantMessage.loading = false;
+        assistantMessage.typing = false;
         sending.value = false;
     }
 }
@@ -623,7 +713,15 @@ onMounted(() => {
                             "
                         >
                             <p class="leading-relaxed whitespace-pre-wrap">
-                                {{ message.content }}
+                                <span>{{ message.content }}</span>
+                                <span
+                                    v-if="
+                                        message.role === 'assistant' &&
+                                        message.typing
+                                    "
+                                    class="typing-cursor"
+                                    aria-hidden="true"
+                                ></span>
                             </p>
                             <div class="mt-2 text-[11px] opacity-70">
                                 {{ formatMessageTime(message.at) }}
@@ -984,3 +1082,27 @@ onMounted(() => {
         </main>
     </AppLayout>
 </template>
+
+<style scoped>
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1rem;
+    margin-left: 2px;
+    background: currentColor;
+    animation: typing-cursor-blink 0.8s infinite;
+    vertical-align: -0.125em;
+}
+
+@keyframes typing-cursor-blink {
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+</style>
