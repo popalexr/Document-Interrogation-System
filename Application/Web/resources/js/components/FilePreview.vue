@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 import CollaboraPreview from '@/components/renderers/CollaboraPreview.vue';
@@ -105,8 +104,10 @@ function extColor(ext: string): string {
 </script>
 
 <template>
-    <Card class="border-muted/60">
-        <CardHeader class="space-y-2">
+    <section
+        class="flex min-h-[42rem] flex-col gap-4 md:h-[calc(100vh-6.5rem)]"
+    >
+        <header class="shrink-0 space-y-2 px-6 pt-6">
             <div class="flex items-start justify-between gap-3">
                 <div class="w-full min-w-0">
                     <div class="leading-none font-semibold sm:text-lg">
@@ -190,9 +191,9 @@ function extColor(ext: string): string {
             </div>
 
             <Separator />
-        </CardHeader>
+        </header>
 
-        <CardContent class="pt-0">
+        <div class="min-h-0 flex-1 px-6">
             <PdfPreview v-if="kind === 'pdf'" :url="fileUrl" />
 
             <TextPreview v-else-if="kind === 'text'" :url="fileUrl" />
@@ -214,6 +215,6 @@ function extColor(ext: string): string {
             >
                 Tip de fișier neacceptat pentru preview.
             </div>
-        </CardContent>
-    </Card>
+        </div>
+    </section>
 </template>

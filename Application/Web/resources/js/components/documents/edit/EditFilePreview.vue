@@ -92,9 +92,7 @@ const kind = computed<PreviewKind>(() => {
 </script>
 
 <template>
-    <article
-        class="edit-file-preview mx-auto flex h-full min-h-0 max-w-5xl flex-col"
-    >
+    <article class="mx-auto flex h-full min-h-0 max-w-5xl flex-col">
         <div
             v-if="!fileUrl"
             class="rounded-xl border border-dashed p-4 text-sm text-muted-foreground"
@@ -142,9 +140,3 @@ const kind = computed<PreviewKind>(() => {
         </div>
     </article>
 </template>
-
-<style scoped>
-.edit-file-preview :deep(.h-\[70vh\]) {
-    height: 100% !important;
-}
-</style>

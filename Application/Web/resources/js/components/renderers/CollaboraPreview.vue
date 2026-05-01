@@ -76,11 +76,13 @@ watch(() => iframe.value?.src, scheduleChromeHide);
 </script>
 
 <template>
-    <div class="overflow-hidden rounded-xl border bg-background">
+    <div
+        class="h-full min-h-[40rem] overflow-hidden rounded-xl border bg-background"
+    >
         <iframe
             ref="iframe"
             :src="url"
-            class="h-[70vh] w-full"
+            class="h-full w-full"
             frameborder="0"
             allow="fullscreen"
             title="Document preview"
