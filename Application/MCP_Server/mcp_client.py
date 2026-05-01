@@ -81,6 +81,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
 
     async def event_source():
         try:
+            yield _edit_status_event("planning", "Planning edit")
             edit_prompt = await mcp_state.call_tool("edit_prompt", {"payload": payload.model_dump()})
             yield f"data: {json.dumps({'type': 'edit_prompt', 'message': edit_prompt})}\n\n"
             edit_prompt_output_file = _extract_edit_prompt_output_file(edit_prompt)
@@ -91,6 +92,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
                 prompt=edit_prompt["prompt"],
             )
 
+            yield _edit_status_event("generating_code", "Generating edit code")
             edit_code = await mcp_state.call_tool("edit_code", {"payload": edit_payload.model_dump()})
             yield f"data: {json.dumps({'type': 'edit_code', 'status': 'ok', 'message': edit_code})}\n\n"
 
@@ -105,6 +107,7 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
             }
 
             try:
+                yield _edit_status_event("applying_changes", "Applying changes")
                 execution_result = await mcp_state.call_tool("execute_code_and_save", {"payload": edit_payload})
                 edited_document_id = execution_result.get("document_id") if isinstance(execution_result, dict) else None
                 if edited_document_id is None:
@@ -115,9 +118,11 @@ async def edit(payload: EditPayload) -> dict[str, Any]:
 
                 yield f"data: {json.dumps({'type': 'execution_result', 'status': 'ok', 'document_id': edited_document_id})}\n\n"
 
+                yield _edit_status_event("done", "Done")
                 yield f"data: {json.dumps({'type': 'final_message', 'status': 'ok', 'message': 'Done!'})}\n\n"
             except Exception as ex:
                 error_message = str(ex)
+                yield _edit_status_event("error", "Edit failed")
                 yield f"data: {json.dumps({'type': 'execution_result', 'status': 'error', 'message': error_message})}\n\n"
                 yield f"data: {json.dumps({'type': 'final_message', 'status': 'error', 'message': error_message})}\n\n"
 
@@ -190,3 +195,11 @@ def _extract_edit_prompt_output_file(edit_prompt: dict[str, Any]) -> str | None:
     output_file = parsed_prompt.get("output_file")
 
     return output_file if isinstance(output_file, str) and output_file.strip() else None
+
+
+def _edit_status_event(status: str, message: str) -> str:
+    """
+    Format the current document-editing state as an SSE event.
+    """
+
+    return f"data: {json.dumps({'type': 'edit_status', 'status': status, 'message': message})}\n\n"

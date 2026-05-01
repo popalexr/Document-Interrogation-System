@@ -152,6 +152,20 @@ const extractFinalMessageContent = (
     return null;
 };
 
+const extractEditStatus = (payload: Record<string, unknown>): string | null => {
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+        return payload.message;
+    }
+
+    if (typeof payload.status === 'string' && payload.status.trim()) {
+        return payload.status
+            .replace(/_/g, ' ')
+            .replace(/^\w/, (letter) => letter.toUpperCase());
+    }
+
+    return null;
+};
+
 const documentInfo = computed(
     () => (page.props.document ?? {}) as Record<string, unknown>,
 );
@@ -186,6 +200,7 @@ const sending = ref(false);
 const chatId = ref<string | null>(null);
 const chatsList = ref<ChatListEntry[]>([]);
 const previewDocumentId = ref('');
+const editingStatus = ref<string | null>(null);
 
 const isPreviewingEditedDocument = computed(
     () =>
@@ -450,6 +465,7 @@ async function sendMessage() {
     messages.value.push(userMessage, assistantMessage);
     prompt.value = '';
     sending.value = true;
+    editingStatus.value = 'Starting edit';
 
     if (chatId.value) {
         upsertChatEntry({
@@ -513,9 +529,23 @@ async function sendMessage() {
                 return;
             }
 
+            if (payload.type === 'edit_status') {
+                editingStatus.value =
+                    extractEditStatus(payload) ?? editingStatus.value;
+                assistantMessage.at = new Date();
+                return;
+            }
+
             if (payload.type === 'edit_prompt') {
+                editingStatus.value = 'Planning edit';
                 assistantMessage.reasoning =
                     extractEditPromptReasoning(payload);
+                assistantMessage.at = new Date();
+                return;
+            }
+
+            if (payload.type === 'edit_code') {
+                editingStatus.value = 'Generating edit code';
                 assistantMessage.at = new Date();
                 return;
             }
@@ -525,15 +555,14 @@ async function sendMessage() {
                     payload.status === 'ok' &&
                     typeof payload.document_id === 'string'
                 ) {
+                    editingStatus.value = 'Done';
                     assistantMessage.edit_document_id = payload.document_id;
-                    assistantMessage.content =
-                        assistantMessage.content.trim() ||
-                        'Edited document generated successfully. Preview is ready.';
                     assistantMessage.at = new Date();
                     setPreviewDocument(payload.document_id);
                     return;
                 }
 
+                editingStatus.value = 'Edit failed';
                 assistantMessage.content =
                     typeof payload.message === 'string'
                         ? payload.message
@@ -544,6 +573,11 @@ async function sendMessage() {
             }
 
             if (payload.type === 'final_message') {
+                if (assistantMessage.loading) {
+                    assistantMessage.at = new Date();
+                    return;
+                }
+
                 assistantMessage.content =
                     extractFinalMessageContent(payload) ??
                     assistantMessage.content;
@@ -552,6 +586,9 @@ async function sendMessage() {
             }
 
             if (payload.type === 'done') {
+                if (editingStatus.value !== 'Edit failed') {
+                    editingStatus.value = 'Done';
+                }
                 assistantMessage.loading = false;
                 assistantMessage.at = new Date();
 
@@ -596,6 +633,7 @@ async function sendMessage() {
             }
 
             if (payload.type === 'error') {
+                editingStatus.value = 'Edit failed';
                 assistantMessage.content =
                     typeof payload.message === 'string'
                         ? payload.message
@@ -645,6 +683,7 @@ async function sendMessage() {
         assistantMessage.loading = false;
         assistantMessage.at = new Date();
     } catch (error: unknown) {
+        editingStatus.value = 'Edit failed';
         assistantMessage.content =
             error instanceof Error ? error.message : 'Error performing edit.';
         assistantMessage.loading = false;
@@ -672,6 +711,7 @@ async function sendMessage() {
                     :active-chat-id="chatId"
                     :prompt="prompt"
                     :sending="sending"
+                    :editing-status="editingStatus"
                     :preview-document-id="previewDocumentId || sourceDocumentId"
                     :original-document-id="sourceDocumentId"
                     :document-name="documentName"

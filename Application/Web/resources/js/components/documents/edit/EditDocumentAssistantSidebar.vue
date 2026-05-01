@@ -51,6 +51,7 @@ const props = defineProps<{
     activeChatId: string | null;
     prompt: string;
     sending: boolean;
+    editingStatus?: string | null;
     previewDocumentId: string;
     originalDocumentId: string;
     documentName: string;
@@ -90,6 +91,10 @@ const canSend = computed(
 const assistantContent = (message: ChatMessage) => {
     if (message.content.trim()) {
         return message.content;
+    }
+
+    if (message.loading && props.editingStatus) {
+        return props.editingStatus;
     }
 
     if (message.loading) {
