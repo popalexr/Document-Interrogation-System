@@ -712,7 +712,7 @@ onMounted(() => {
                                     : 'self-start bg-muted text-foreground'
                             "
                         >
-                            <p class="leading-relaxed whitespace-pre-wrap">
+                            <span class="leading-relaxed whitespace-pre-wrap">
                                 <span>{{ message.content }}</span>
                                 <span
                                     v-if="
@@ -722,7 +722,7 @@ onMounted(() => {
                                     class="typing-cursor"
                                     aria-hidden="true"
                                 ></span>
-                            </p>
+                            </span>
                             <div class="mt-2 text-[11px] opacity-70">
                                 {{ formatMessageTime(message.at) }}
                             </div>

@@ -665,18 +665,16 @@ onMounted(() => {
                                         class="max-w-3/4 rounded-md px-4 py-3 text-sm whitespace-pre-wrap"
                                     >
                                         <span
-                                            class="inline-flex items-end gap-2 leading-relaxed"
+                                            class="leading-relaxed whitespace-pre-wrap"
                                         >
-                                            <span class="whitespace-pre-wrap">{{
-                                                m.content
-                                            }}</span>
+                                            <span>{{ m.content }}</span>
                                             <Spinner
                                                 v-if="
                                                     m.role === 'assistant' &&
                                                     m.loading
                                                 "
                                                 size="sm"
-                                                class="inline-block shrink-0 align-middle"
+                                                class="ml-2 inline-block shrink-0 align-middle"
                                             />
                                             <span
                                                 v-else-if="
