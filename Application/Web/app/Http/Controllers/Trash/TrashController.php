@@ -32,7 +32,7 @@ class TrashController extends Controller
             ->whereNotNull('deleted_at')
             ->orderByDesc('deleted_at')
             ->limit(100)
-            ->get(['_id', 'original_name', 'mime_type', 'size', 'status', 'r2_key', 'deleted_at'])
+            ->get(['_id', 'original_name', 'mime_type', 'size', 'status', 'r2_key', 'deleted_at', 'created_at'])
             ->map(function ($u) {
                 return [
                     '_id' => (string) $u->_id,
@@ -42,6 +42,7 @@ class TrashController extends Controller
                     'status' => (string) $u->status,
                     'r2_key' => (string) $u->r2_key,
                     'deleted_at' => $u->deleted_at,
+                    'created_at' => $u->created_at,
                 ];
             });
     }

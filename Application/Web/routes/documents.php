@@ -3,6 +3,7 @@
 use App\Http\Controllers\Documents\DeleteDocumentController;
 use App\Http\Controllers\Documents\EditDocumentController;
 use App\Http\Controllers\Documents\InterrogateDocumentController;
+use App\Http\Controllers\Documents\RestoreDocumentController;
 use App\Http\Controllers\Documents\ViewDocumentController;
 use App\Http\Controllers\Files\DownloadFileController;
 use App\Http\Controllers\Upload\UploadController;
@@ -29,4 +30,6 @@ Route::middleware(['auth'])->prefix('documents')->group(function () {
         ->name('documents.edit_document');
     Route::post('/delete', DeleteDocumentController::class)
         ->name('documents.delete');
+    Route::post('/restore', RestoreDocumentController::class)
+        ->name('documents.restore');
 });
