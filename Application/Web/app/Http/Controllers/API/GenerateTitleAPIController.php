@@ -24,6 +24,10 @@ class GenerateTitleAPIController extends Controller
             return response()->json(['error' => 'Chat not found'], 404);
         }
 
+        if($chat->user_id !== $this->request->user()->id) {
+            return response()->json(['error' => 'Chat not found'], 404);
+        }
+
         $response = Http::post(config('mcp.host') . ':' . config('mcp.port') . config('mcp.generate_title_endpoint'), [
             'query' => $this->request['query'],
         ]);

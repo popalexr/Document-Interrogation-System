@@ -20,11 +20,15 @@ class InterrogateDocumentController extends Controller
     private $documentId;
     private $chatId;
 
+    private ?Upload $document = null;
+
     public function __construct(private Request $request)
     {
         $this->userId = optional($request->user())->getKey();
         $this->documentId = (string) $request->query('id', null);
         $this->chatId = (string) $request->query('chat_id', null);
+
+        $this->document = $this->getDocumentById();
     }
 
     /**
@@ -33,13 +37,17 @@ class InterrogateDocumentController extends Controller
     public function index()
     {
         if (blank($this->documentId) || blank($this->userId)) {
-            abort(404);
+            return redirect()->back()->with('error', 'Document not found.');
         }
 
         $upload = $this->getDocumentById();
 
         if (blank($upload)) {
-            abort(404);
+            return redirect()->back()->with('error', 'Document not found.');
+        }
+
+        if ($upload->user_id !== $this->userId) {
+            return redirect()->back()->with('error', 'Document not found.');
         }
 
         if (!blank($this->chatId) && !$this->existsChat($this->chatId)) {

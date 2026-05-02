@@ -25,6 +25,10 @@ class ViewDocumentController extends Controller
             return redirect()->back()->with('error', 'Document not found.');
         }
 
+        if ($this->document->user_id !== $this->request->user()->id) {
+            return redirect()->back()->with('error', 'Document not found.');
+        }
+
         return Inertia::render('documents/ViewDocument', [
             'document' => [
                 '_id' => (string) $this->document->_id,

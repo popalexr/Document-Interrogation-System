@@ -21,8 +21,11 @@ class DeleteDocumentController extends Controller
     }
 
     public function __invoke() {
-        if (blank($this->document))
-        {
+        if (blank($this->document))  {
+            return redirect()->back()->with('error', 'Document not found.');
+        }
+
+        if ($this->document->user_id !== $this->request->user()->id)  {
             return redirect()->back()->with('error', 'Document not found.');
         }
 

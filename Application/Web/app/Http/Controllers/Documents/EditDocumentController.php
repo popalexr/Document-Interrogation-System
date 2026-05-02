@@ -36,6 +36,10 @@ class EditDocumentController extends Controller
             return redirect()->back()->with('error', 'Document not found.');
         }
 
+        if ($this->document->user_id !== $this->request->user()->id) {
+            return redirect()->back()->with('error', 'Document not found.');
+        }
+
         if (!blank($this->chatId) && !$this->existsChat($this->chatId, $this->documentId)) {
             return redirect()->route('documents.edit', ['id' => $this->documentId]);
         }

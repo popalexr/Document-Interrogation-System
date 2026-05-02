@@ -26,6 +26,10 @@ class RestoreDocumentController extends Controller
             return redirect()->back()->with('error', 'Document not found.');
         }
 
+        if ($this->document->user_id !== $this->request->user()->id) {
+            return redirect()->back()->with('error', 'Document not found.');
+        }
+
         $this->document->deleted_at = null;
         $this->document->save();
 
