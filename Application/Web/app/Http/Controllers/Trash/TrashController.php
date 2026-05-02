@@ -28,6 +28,7 @@ class TrashController extends Controller
     private function getDeletedDocuments()
     {
         return Upload::query()
+            ->where('user_id', $this->request->user()->id)
             ->whereNotNull('deleted_at')
             ->orderByDesc('deleted_at')
             ->limit(100)
