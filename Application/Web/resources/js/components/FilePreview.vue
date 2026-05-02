@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import CollaboraPreview from '@/components/renderers/CollaboraPreview.vue';
 import HtmlPreview from '@/components/renderers/HtmlPreview.vue';
@@ -11,6 +16,7 @@ import MarkdownPreview from '@/components/renderers/MarkdownPreview.vue';
 import PdfPreview from '@/components/renderers/PdfPreview.vue';
 import TextPreview from '@/components/renderers/TextPreview.vue';
 import documents from '@/routes/documents';
+import { Icon as DocumentIcon } from '@iconify/vue';
 import { Link } from '@inertiajs/vue3';
 import { MoreHorizontal } from 'lucide-vue-next';
 import Button from './ui/button/Button.vue';
@@ -71,6 +77,31 @@ const kind = computed<PreviewKind>(() => {
 
 const label = computed(() => ext.value.toUpperCase() || 'FILE');
 
+const documentIcon = computed(() => {
+    switch (label.value) {
+        case 'DOC':
+        case 'DOCX':
+            return 'vscode-icons:file-type-word';
+        case 'PDF':
+            return 'vscode-icons:file-type-pdf2';
+        case 'PPT':
+        case 'PPTX':
+            return 'vscode-icons:file-type-powerpoint';
+        case 'XLS':
+        case 'XLSX':
+        case 'CSV':
+            return 'vscode-icons:file-type-excel';
+        case 'MD':
+        case 'TXT':
+        case 'TEX':
+            return 'vscode-icons:file-type-text';
+        case 'JSON':
+            return 'vscode-icons:file-type-json';
+        default:
+            return 'vscode-icons:default-file';
+    }
+});
+
 const collaboraUrl = computed(() => {
     if (!props.fileId || typeof window === 'undefined') {
         return '';
@@ -81,26 +112,6 @@ const collaboraUrl = computed(() => {
         window.location.origin,
     ).toString();
 });
-
-function extColor(ext: string): string {
-    switch (ext) {
-        case 'PDF':
-            return 'bg-red-500 text-white';
-        case 'DOC':
-        case 'DOCX':
-            return 'bg-blue-600 text-white';
-        case 'XLS':
-        case 'XLSX':
-            return 'bg-green-600 text-white';
-        case 'PPT':
-        case 'PPTX':
-            return 'bg-amber-500 text-white';
-        case 'TXT':
-            return 'bg-muted text-foreground';
-        default:
-            return 'bg-muted text-foreground';
-    }
-}
 </script>
 
 <template>
@@ -113,12 +124,23 @@ function extColor(ext: string): string {
                     <div class="leading-none font-semibold sm:text-lg">
                         <div class="flex justify-between gap-3">
                             <div class="flex items-center gap-2">
-                                <Badge
-                                    class="text-xs"
-                                    :class="extColor(label)"
-                                    >{{ label }}</Badge
-                                >
-                                {{ fileName }}
+                                <TooltipProvider :delay-duration="150">
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <DocumentIcon
+                                                :icon="documentIcon"
+                                                class="h-6 w-6 shrink-0"
+                                                :aria-label="label"
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {{ label }}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <span class="min-w-0 truncate">
+                                    {{ fileName }}
+                                </span>
                             </div>
                             <div>
                                 <DropdownMenu>

@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import EditFilePreview from '@/components/documents/edit/EditFilePreview.vue';
-import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import documents from '@/routes/documents';
+import { Icon as DocumentIcon } from '@iconify/vue';
 import { Download } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -20,6 +26,31 @@ const ext = computed(() => {
 
 const label = computed(() => ext.value.toUpperCase() || 'FILE');
 
+const documentIcon = computed(() => {
+    switch (label.value) {
+        case 'DOC':
+        case 'DOCX':
+            return 'vscode-icons:file-type-word';
+        case 'PDF':
+            return 'vscode-icons:file-type-pdf2';
+        case 'PPT':
+        case 'PPTX':
+            return 'vscode-icons:file-type-powerpoint';
+        case 'XLS':
+        case 'XLSX':
+        case 'CSV':
+            return 'vscode-icons:file-type-excel';
+        case 'MD':
+        case 'TXT':
+        case 'TEX':
+            return 'vscode-icons:file-type-text';
+        case 'JSON':
+            return 'vscode-icons:file-type-json';
+        default:
+            return 'vscode-icons:default-file';
+    }
+});
+
 const downloadUrl = computed(() =>
     documents.downloadDocument.url({
         query: {
@@ -28,26 +59,6 @@ const downloadUrl = computed(() =>
         },
     }),
 );
-
-function extColor(extension: string): string {
-    switch (extension) {
-        case 'PDF':
-            return 'bg-red-500 text-white';
-        case 'DOC':
-        case 'DOCX':
-            return 'bg-blue-600 text-white';
-        case 'XLS':
-        case 'XLSX':
-            return 'bg-green-600 text-white';
-        case 'PPT':
-        case 'PPTX':
-            return 'bg-amber-500 text-white';
-        case 'TXT':
-            return 'bg-muted text-foreground';
-        default:
-            return 'bg-muted text-foreground';
-    }
-}
 </script>
 
 <template>
@@ -57,9 +68,20 @@ function extColor(extension: string): string {
         >
             <div class="truncatefont-medium text-foreground">
                 <div class="flex items-center gap-2 text-sm">
-                    <Badge class="text-xs" :class="extColor(label)">{{
-                        label
-                    }}</Badge>
+                    <TooltipProvider :delay-duration="150">
+                        <Tooltip>
+                            <TooltipTrigger as-child>
+                                <DocumentIcon
+                                    :icon="documentIcon"
+                                    class="h-6 w-6 shrink-0"
+                                    :aria-label="label"
+                                />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {{ label }}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <span class="truncate font-medium text-foreground">
                         {{ fileName }}
                     </span>
