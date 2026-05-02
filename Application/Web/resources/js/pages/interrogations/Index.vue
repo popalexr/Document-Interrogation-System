@@ -782,9 +782,7 @@ onMounted(() => {
                         </Badge>
                     </div>
 
-                    <div
-                        class="rounded-lg border border-slate-300 bg-background"
-                    >
+                    <div class="rounded-lg border border-input bg-background">
                         <div class="flex items-center gap-3 px-4 pt-3 pb-2">
                             <button
                                 type="button"

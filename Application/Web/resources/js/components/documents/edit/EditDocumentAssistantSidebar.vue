@@ -373,7 +373,7 @@ watch(
                         class="flex items-start justify-end gap-3"
                     >
                         <div
-                            class="max-w-[82%] rounded-2xl bg-blue-50 px-4 py-3 leading-8 whitespace-pre-line text-foreground"
+                            class="max-w-[82%] rounded-2xl bg-primary px-4 py-3 leading-8 whitespace-pre-line text-primary-foreground"
                         >
                             {{ message.content }}
                         </div>
