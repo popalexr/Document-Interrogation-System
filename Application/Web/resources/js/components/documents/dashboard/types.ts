@@ -12,6 +12,7 @@ export type UploadItem = {
     size: number;
     status: UploadStatus;
     r2_key: string;
+    favorite?: boolean;
     created_at?: string | Date;
     updated_at?: string | Date;
 };

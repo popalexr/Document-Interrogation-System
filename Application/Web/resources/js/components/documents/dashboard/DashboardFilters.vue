@@ -17,9 +17,12 @@ import {
 import { computed } from 'vue';
 import type { SortKey, StatusFilter } from './types';
 
-defineProps<{
+withDefaults(defineProps<{
     documentTypes: string[];
-}>();
+    showUploadButton?: boolean;
+}>(), {
+    showUploadButton: true,
+});
 
 const searchQuery = defineModel<string>('searchQuery', { required: true });
 const statusFilter = defineModel<StatusFilter>('statusFilter', {
@@ -129,7 +132,7 @@ const sortLabel = computed(() => {
             </DropdownMenuContent>
         </DropdownMenu>
 
-        <div class="ml-auto">
+        <div v-if="showUploadButton" class="ml-auto">
             <UploadButton
                 label="Upload Documents"
                 variant="default"

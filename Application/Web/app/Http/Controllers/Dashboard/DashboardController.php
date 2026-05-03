@@ -35,7 +35,7 @@ class DashboardController extends Controller
      */
     private function getUserUploads(): Collection
     {
-        if (!$this->request->user()) {
+        if (! $this->request->user()) {
             return collect();
         }
 
@@ -51,6 +51,7 @@ class DashboardController extends Controller
                 'size',
                 'status',
                 'r2_key',
+                'favorite',
                 'created_at',
                 'updated_at',
             ])
@@ -62,6 +63,7 @@ class DashboardController extends Controller
                     'size' => (int) $u->size,
                     'status' => (string) $u->status,
                     'r2_key' => (string) $u->r2_key,
+                    'favorite' => (bool) $u->favorite,
                     'created_at' => $u->created_at,
                     'updated_at' => $u->updated_at,
                 ];

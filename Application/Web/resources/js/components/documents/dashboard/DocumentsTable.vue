@@ -27,6 +27,7 @@ import {
     Play,
     RefreshCcw,
     Sparkles,
+    Star,
     Trash2,
 } from 'lucide-vue-next';
 import DocumentStatusBadge from './DocumentStatusBadge.vue';
@@ -45,12 +46,14 @@ import type { UploadItem } from './types';
 defineProps<{
     uploads: UploadItem[];
     selectedDocumentId: string | null;
+    favoriteDocumentId?: string | null;
 }>();
 
 const emit = defineEmits<{
     select: [upload: UploadItem];
     view: [upload: UploadItem];
     delete: [upload: UploadItem];
+    toggleFavorite: [upload: UploadItem];
 }>();
 </script>
 
@@ -61,12 +64,8 @@ const emit = defineEmits<{
         <div
             class="grid h-10 shrink-0 grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b bg-muted/30 px-4 text-xs text-muted-foreground"
         >
-            <div>
-                <input
-                    type="checkbox"
-                    class="size-4 rounded border-input"
-                    aria-label="Select all documents"
-                />
+            <div class="flex justify-center">
+                <Star class="size-4" />
             </div>
             <div>Document</div>
             <div>Type</div>
@@ -93,14 +92,28 @@ const emit = defineEmits<{
                         @click="emit('select', upload)"
                         @dblclick="emit('view', upload)"
                     >
-                        <div>
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-input accent-blue-600"
-                                :checked="selectedDocumentId === upload._id"
-                                aria-label="Select document"
-                                @click.stop="emit('select', upload)"
-                            />
+                        <div class="flex justify-center" @click.stop>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="size-8"
+                                :disabled="favoriteDocumentId === upload._id"
+                                :aria-label="
+                                    upload.favorite
+                                        ? 'Remove from favorites'
+                                        : 'Mark as favorite'
+                                "
+                                @click="emit('toggleFavorite', upload)"
+                            >
+                                <Star
+                                    class="size-5"
+                                    :class="
+                                        upload.favorite
+                                            ? 'fill-amber-400 text-amber-500'
+                                            : 'text-muted-foreground'
+                                    "
+                                />
+                            </Button>
                         </div>
 
                         <div class="flex min-w-0 items-center gap-3">

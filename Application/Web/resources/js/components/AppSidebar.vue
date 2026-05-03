@@ -11,6 +11,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { home as dashboard } from '@/routes/dashboard';
+import { index as favorites_index } from '@/routes/favorites-documents';
 import { index as interrogations_index } from '@/routes/interrogations';
 import { index as recent_files_index } from '@/routes/recent-documents';
 import { index as trash_index } from '@/routes/trash';
@@ -37,7 +38,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Favorites',
-        href: '#',
+        href: favorites_index(),
         icon: Star,
     },
     {

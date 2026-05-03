@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DashboardFilters from '@/components/documents/dashboard/DashboardFilters.vue';
-import DashboardHeader from '@/components/documents/dashboard/DashboardHeader.vue';
 import DeleteDocumentDialog from '@/components/documents/dashboard/DeleteDocumentDialog.vue';
 import DocumentDetailsPanel from '@/components/documents/dashboard/DocumentDetailsPanel.vue';
 import DocumentsTable from '@/components/documents/dashboard/DocumentsTable.vue';
@@ -23,13 +22,14 @@ import { computed, ref, watch } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
+    { title: 'Favorites', href: favoritesDocuments.index.url() },
 ];
 
 const page = usePage();
 const user = page.props.auth.user as { name: string };
 
-const uploads = computed<UploadItem[]>(
-    () => ((page.props as any).uploads ?? []) as UploadItem[],
+const favoriteDocuments = computed<UploadItem[]>(
+    () => ((page.props as any).favoriteDocuments ?? []) as UploadItem[],
 );
 
 const selectedDocumentId = ref<string | null>(null);
@@ -44,14 +44,14 @@ const favoriteDocumentId = ref<string | null>(null);
 
 const documentTypes = computed(() => {
     return Array.from(
-        new Set(uploads.value.map((upload) => fileExt(upload))),
+        new Set(favoriteDocuments.value.map((upload) => fileExt(upload))),
     ).filter(Boolean);
 });
 
-const filteredUploads = computed(() => {
+const filteredDocuments = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
 
-    return [...uploads.value]
+    return [...favoriteDocuments.value]
         .filter((upload) => {
             const matchesSearch =
                 !query || upload.original_name.toLowerCase().includes(query);
@@ -78,18 +78,18 @@ const filteredUploads = computed(() => {
 
 const selectedDocument = computed(() => {
     return (
-        uploads.value.find(
+        favoriteDocuments.value.find(
             (upload) => upload._id === selectedDocumentId.value,
         ) ?? null
     );
 });
 
 watch(
-    uploads,
-    (nextUploads) => {
+    favoriteDocuments,
+    (nextDocuments) => {
         if (
             selectedDocumentId.value &&
-            nextUploads.some(
+            nextDocuments.some(
                 (upload) => upload._id === selectedDocumentId.value,
             )
         ) {
@@ -163,7 +163,7 @@ function toggleFavorite(upload: UploadItem) {
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Favorite documents" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <main
@@ -171,7 +171,13 @@ function toggleFavorite(upload: UploadItem) {
         >
             <div class="flex min-h-0 flex-1 gap-6">
                 <section class="flex min-h-0 min-w-0 flex-1 flex-col">
-                    <DashboardHeader :owner-name="user.name" />
+                    <div class="mb-6">
+                        <h1 class="text-2xl font-semibold">Favorites</h1>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Owner:
+                            <span class="text-foreground">{{ user.name }}</span>
+                        </p>
+                    </div>
 
                     <DashboardFilters
                         v-model:search-query="searchQuery"
@@ -179,10 +185,11 @@ function toggleFavorite(upload: UploadItem) {
                         v-model:type-filter="typeFilter"
                         v-model:sort-key="sortKey"
                         :document-types="documentTypes"
+                        :show-upload-button="false"
                     />
 
                     <DocumentsTable
-                        :uploads="filteredUploads"
+                        :uploads="filteredDocuments"
                         :selected-document-id="selectedDocumentId"
                         :favorite-document-id="favoriteDocumentId"
                         @select="selectDocument"

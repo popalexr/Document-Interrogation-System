@@ -11,6 +11,7 @@ use MongoDB\Laravel\Relations\BelongsTo;
 class Upload extends Eloquent
 {
     protected $connection = 'mongodb';
+
     protected $collection = 'uploads';
 
     protected $fillable = [
@@ -23,11 +24,13 @@ class Upload extends Eloquent
         'r2_key',
         'status',
         'meta',
+        'favorite',
     ];
 
     protected $casts = [
         'size' => 'integer',
         'meta' => 'array',
+        'favorite' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
