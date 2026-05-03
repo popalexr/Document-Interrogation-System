@@ -139,7 +139,7 @@ async function sendMessage() {
     let queuedText = '';
     let typingTimer: ReturnType<typeof window.setTimeout> | null = null;
     let resolveTypingIdle: (() => void) | null = null;
-    const typingSpeedMs = 18;
+    const typingSpeedMs = 6;
     input.value = '';
     sending.value = true;
     await nextTick();
