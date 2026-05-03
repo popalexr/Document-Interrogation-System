@@ -4,13 +4,16 @@ export type DocumentInfo = {
     mime_type: string;
     size: number;
     status: string;
-    r2_key: string;
+    r2_key?: string;
     created_at?: string | Date;
+    updated_at?: string | Date;
 };
 
 export type ChatsList = {
     chat_id: string;
     title: string | null;
+    document_count?: number;
+    updated_at?: string | Date;
 };
 
 export type ChatMessage = {

@@ -9,6 +9,7 @@ import DialogHeader from '@/components/ui/dialog/DialogHeader.vue';
 import DialogTitle from '@/components/ui/dialog/DialogTitle.vue';
 
 defineProps<{
+    description?: string;
     isDeleting: boolean;
 }>();
 
@@ -25,8 +26,10 @@ const open = defineModel<boolean>('open', { required: true });
             <DialogHeader class="space-y-2">
                 <DialogTitle>Delete all chats</DialogTitle>
                 <DialogDescription>
-                    Are you sure you want to delete all chats for this document?
-                    This action cannot be undone.
+                    {{
+                        description ??
+                        'Are you sure you want to delete all chats for this document? This action cannot be undone.'
+                    }}
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter class="gap-2">
