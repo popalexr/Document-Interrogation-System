@@ -364,6 +364,14 @@ async function sendMessage(): Promise<void> {
 
                 assistantMessage.at = new Date();
 
+                if (Array.isArray(payload.citations)) {
+                    assistantMessage.citations = payload.citations.filter(
+                        (citation: any) =>
+                            typeof citation?.document_id === 'string' &&
+                            typeof citation?.original_name === 'string',
+                    );
+                }
+
                 if (payload.chatId) {
                     chatId.value = payload.chatId;
                     window.history.replaceState(

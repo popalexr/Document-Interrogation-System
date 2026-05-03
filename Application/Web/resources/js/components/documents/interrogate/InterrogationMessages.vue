@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import { FileText } from 'lucide-vue-next';
 import { nextTick, ref, watch } from 'vue';
 import { formatMessageTime } from './interrogationHelpers';
-import type { ChatMessage } from './types';
+import type { ChatMessage, CitationDocument } from './types';
 
 const props = defineProps<{
     messages: ChatMessage[];
@@ -15,6 +17,14 @@ function scrollToBottom(): void {
 
     requestAnimationFrame(() => {
         el.scrollTop = el.scrollHeight;
+    });
+}
+
+function openCitation(citation: CitationDocument): void {
+    router.visit('/documents/view', {
+        method: 'get',
+        data: { id: citation.document_id },
+        preserveState: false,
     });
 }
 
@@ -55,6 +65,26 @@ defineExpose({
                         aria-hidden="true"
                     ></span>
                 </span>
+                <div
+                    v-if="
+                        message.role === 'assistant' &&
+                        (message.citations?.length ?? 0) > 0
+                    "
+                    class="mt-3 flex flex-wrap gap-2"
+                    aria-label="Cited documents"
+                >
+                    <button
+                        v-for="citation in message.citations"
+                        :key="citation.document_id"
+                        type="button"
+                        class="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        :title="citation.original_name"
+                        @click="openCitation(citation)"
+                    >
+                        <FileText class="h-3.5 w-3.5 shrink-0" />
+                        <span class="truncate">{{ citation.original_name }}</span>
+                    </button>
+                </div>
                 <div class="mt-2 text-[11px] opacity-70">
                     {{ formatMessageTime(message.at) }}
                 </div>

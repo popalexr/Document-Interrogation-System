@@ -109,7 +109,11 @@ class MCPState:
             answer = self._extract_answer(result)
 
             if answer is not None:
-                yield {"type": "done", "answer": answer}
+                done_event = {"type": "done", "answer": answer}
+                if isinstance(result, dict) and isinstance(result.get("citations"), list):
+                    done_event["citations"] = result["citations"]
+
+                yield done_event
             else:
                 yield {"type": "done", "result": result}
         finally:

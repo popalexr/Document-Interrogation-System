@@ -62,6 +62,7 @@ def initialize_mcp(mcp_instance):
         """
 
         answer = ""
+        citations = []
         progress = 0
 
         for event in stream_ai_interrogation(payload):
@@ -71,8 +72,9 @@ def initialize_mcp(mcp_instance):
                 await ctx.report_progress(progress, message=json.dumps(event))
             elif event.get("type") == "done":
                 answer = event.get("answer", answer)
+                citations = event.get("citations", citations)
 
-        return {"answer": answer}
+        return {"answer": answer, "citations": citations}
 
     @mcp.tool()
     def edit_prompt(payload: EditPayload) -> dict:

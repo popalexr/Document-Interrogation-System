@@ -122,6 +122,7 @@ class InterrogationsController extends Controller
 
             $buffer = '';
             $answer = '';
+            $citations = [];
 
             try {
                 echo ": stream start\n\n";
@@ -141,12 +142,14 @@ class InterrogationsController extends Controller
                     flush();
 
                     $buffer .= $chunk;
-                    [$buffer, $answer] = $this->consumeStreamBuffer($buffer, $answer);
+                    [$buffer, $answer, $citations] = $this->consumeStreamBuffer($buffer, $answer, $citations);
                 }
 
                 if (trim($buffer) !== '') {
-                    [, $answer] = $this->consumeStreamBuffer($buffer . "\n\n", $answer);
+                    [, $answer, $citations] = $this->consumeStreamBuffer($buffer . "\n\n", $answer, $citations);
                 }
+
+                $citationDocuments = $this->resolveCitationDocuments($citations);
 
                 if (!blank($answer)) {
                     $this->storeAIInterrogation([
@@ -154,10 +157,16 @@ class InterrogationsController extends Controller
                         'documents_ids' => $documentsIds,
                         'role' => 'assistant',
                         'content' => $answer,
+                        'citations' => $citationDocuments,
                     ]);
                 }
 
-                echo "data: " . json_encode(['type' => 'done', 'newChat' => $newChat, 'chatId' => $chatId]) . "\n\n";
+                echo "data: " . json_encode([
+                    'type' => 'done',
+                    'newChat' => $newChat,
+                    'chatId' => $chatId,
+                    'citations' => $citationDocuments,
+                ]) . "\n\n";
 
                 @ob_flush();
                 flush();
@@ -335,6 +344,7 @@ class InterrogationsController extends Controller
             'documents_ids' => $data['documents_ids'],
             'role' => $data['role'] ?? 'user',
             'content' => $data['content'],
+            'citations' => $data['citations'] ?? [],
             'created_at' => now(),
         ]);
 
@@ -356,6 +366,7 @@ class InterrogationsController extends Controller
             $history[] = [
                 'role' => $interrogation->role,
                 'content' => $interrogation->content,
+                'citations' => $interrogation->citations ?? [],
                 'at' => $interrogation->created_at,
             ];
         }
@@ -379,7 +390,7 @@ class InterrogationsController extends Controller
         return $interrogation?->documents_ids ?? [];
     }
 
-    private function consumeStreamBuffer(string $buffer, string $answer): array
+    private function consumeStreamBuffer(string $buffer, string $answer, array $citations): array
     {
         while (($pos = strpos($buffer, "\n\n")) !== false) {
             $rawEvent = substr($buffer, 0, $pos);
@@ -403,9 +414,95 @@ class InterrogationsController extends Controller
                 $answer .= (string) $payload['delta'];
             } elseif ($type === 'done' && isset($payload['answer'])) {
                 $answer = (string) $payload['answer'];
+                $citations = $this->mergeCitations($citations, $payload['citations'] ?? []);
             }
         }
 
-        return [$buffer, $answer];
+        return [$buffer, $answer, $citations];
+    }
+
+    private function mergeCitations(array $existingCitations, mixed $nextCitations): array
+    {
+        if (!is_array($nextCitations)) {
+            return $existingCitations;
+        }
+
+        $seenFileIds = [];
+        foreach ($existingCitations as $citation) {
+            if (is_array($citation) && !blank($citation['file_id'] ?? null)) {
+                $seenFileIds[(string) $citation['file_id']] = true;
+            }
+        }
+
+        foreach ($nextCitations as $citation) {
+            if (!is_array($citation) || blank($citation['file_id'] ?? null)) {
+                continue;
+            }
+
+            $fileId = (string) $citation['file_id'];
+            if (isset($seenFileIds[$fileId])) {
+                continue;
+            }
+
+            $existingCitations[] = [
+                'file_id' => $fileId,
+                'filename' => (string) ($citation['filename'] ?? ''),
+            ];
+            $seenFileIds[$fileId] = true;
+        }
+
+        return $existingCitations;
+    }
+
+    private function resolveCitationDocuments(array $citations): array
+    {
+        $fileIds = [];
+
+        foreach ($citations as $citation) {
+            if (!is_array($citation) || blank($citation['file_id'] ?? null)) {
+                continue;
+            }
+
+            $fileIds[] = (string) $citation['file_id'];
+        }
+
+        $fileIds = array_values(array_unique($fileIds));
+
+        if (empty($fileIds)) {
+            return [];
+        }
+
+        $uploadsByVectorFileId = Upload::query()
+            ->where('user_id', $this->userId)
+            ->whereNull('deleted_at')
+            ->whereIn('vector_file_id', $fileIds)
+            ->get(['_id', 'original_name', 'vector_file_id'])
+            ->keyBy(fn (Upload $upload) => (string) $upload->vector_file_id);
+
+        $documents = [];
+        $seenDocumentIds = [];
+
+        foreach ($citations as $citation) {
+            $fileId = (string) ($citation['file_id'] ?? '');
+            $upload = $uploadsByVectorFileId->get($fileId);
+
+            if (!$upload) {
+                continue;
+            }
+
+            $documentId = (string) $upload->_id;
+            if (isset($seenDocumentIds[$documentId])) {
+                continue;
+            }
+
+            $documents[] = [
+                'document_id' => $documentId,
+                'original_name' => (string) $upload->original_name,
+                'file_id' => $fileId,
+            ];
+            $seenDocumentIds[$documentId] = true;
+        }
+
+        return $documents;
     }
 }

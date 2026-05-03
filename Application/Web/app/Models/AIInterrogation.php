@@ -19,10 +19,12 @@ class AIInterrogation extends Eloquent
         'content',       // message content (question/answer)
         'chat_id',       // optional owner/initiator
         'documents_ids', // list of document ids used as context
+        'citations',     // documents cited by an assistant answer
     ];
 
     protected $casts = [
         'documents_ids' => 'array',
+        'citations' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

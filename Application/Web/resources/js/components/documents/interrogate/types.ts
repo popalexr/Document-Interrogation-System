@@ -16,10 +16,17 @@ export type ChatsList = {
     updated_at?: string | Date;
 };
 
+export type CitationDocument = {
+    document_id: string;
+    original_name: string;
+    file_id?: string;
+};
+
 export type ChatMessage = {
     role: 'user' | 'assistant';
     content: string;
     at: Date | string;
+    citations?: CitationDocument[];
     loading?: boolean;
     typing?: boolean;
 };

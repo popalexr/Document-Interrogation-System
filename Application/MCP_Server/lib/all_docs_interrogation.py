@@ -77,7 +77,11 @@ def stream_ai_interrogation(payload: AIInterrogationPayload) -> Generator[dict, 
         raw_text = last_done_text or _extract_text_from_response(final_response)
         accumulated = FileciteSanitizer.remove_all(raw_text)
 
-    yield {"type": "done", "answer": accumulated}
+    yield {
+        "type": "done",
+        "answer": accumulated,
+        "citations": _extract_file_citations(final_response),
+    }
 
 
 def collect_ai_interrogation_answer(payload: AIInterrogationPayload) -> str:
@@ -144,6 +148,44 @@ def _extract_text_from_response(response) -> str:
                     text_parts.append(text)
 
     return "".join(text_parts).strip()
+
+
+def _extract_file_citations(response) -> list[dict[str, str]]:
+    """
+    Extract unique file_search citation annotations from a parsed response object.
+    """
+
+    if response is None:
+        return []
+
+    citations: list[dict[str, str]] = []
+    seen_file_ids: set[str] = set()
+
+    for output in getattr(response, "output", []) or []:
+        if getattr(output, "type", None) != "message":
+            continue
+
+        for content in getattr(output, "content", []) or []:
+            if getattr(content, "type", None) != "output_text":
+                continue
+
+            for annotation in getattr(content, "annotations", []) or []:
+                if getattr(annotation, "type", None) != "file_citation":
+                    continue
+
+                file_id = getattr(annotation, "file_id", None)
+                if not file_id or file_id in seen_file_ids:
+                    continue
+
+                citations.append(
+                    {
+                        "file_id": file_id,
+                        "filename": getattr(annotation, "filename", "") or "",
+                    }
+                )
+                seen_file_ids.add(file_id)
+
+    return citations
 
 
 def _get_chat_history(payload: AIInterrogationPayload) -> list[dict]:
