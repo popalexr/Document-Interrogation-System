@@ -175,6 +175,14 @@ async def vectorize(payload: VectorizePayload) -> dict[str, Any]:
 
     return await mcp_state.call_tool("vectorize", {"payload": payload.model_dump()})
 
+@app.post("/vector_search", tags=["Vector Search"])
+async def vector_search(payload: VectorSearchPayload) -> dict[str, Any]:
+    """
+    Search the user's vectorized documents by semantic context.
+    """
+
+    return await mcp_state.call_tool("vector_search", {"payload": payload.model_dump()})
+
 @app.delete("/delete_document", tags=["Delete Document"])
 async def delete_document(payload: DeleteDocumentPayload) -> dict[str, Any]:
     """

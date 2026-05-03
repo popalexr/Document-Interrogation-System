@@ -194,6 +194,19 @@ def initialize_mcp(mcp_instance):
         )
 
         return {"status": "vectorization_complete", "vector_store_id": vector_store.id, "vector_file_id": uploaded_file.id}
+
+    @mcp.tool()
+    def vector_search(payload: VectorSearchPayload) -> dict:
+        """
+        Search the user's vectorized documents by semantic context.
+        Payload must contain 'user_id' and 'query' keys.
+        """
+
+        return search_vector_store(
+            user_id=payload.user_id,
+            query=payload.query,
+            max_num_results=payload.max_num_results,
+        )
     
     @mcp.tool()
     def delete_document(payload: DeleteDocumentPayload) -> dict:

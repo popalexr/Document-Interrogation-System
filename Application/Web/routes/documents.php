@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Documents\DeleteDocumentController;
 use App\Http\Controllers\Documents\EditDocumentController;
+use App\Http\Controllers\Documents\FileRetrievalController;
 use App\Http\Controllers\Documents\InterrogateDocumentController;
 use App\Http\Controllers\Documents\RestoreDocumentController;
 use App\Http\Controllers\Documents\ViewDocumentController;
@@ -28,6 +29,8 @@ Route::middleware(['auth'])->prefix('documents')->group(function () {
         ->name('documents.interrogate.store');
     Route::post('/edit', [EditDocumentController::class, 'store'])
         ->name('documents.edit_document');
+    Route::post('/retrieve', FileRetrievalController::class)
+        ->name('documents.retrieve');
     Route::post('/delete', DeleteDocumentController::class)
         ->name('documents.delete');
     Route::post('/restore', RestoreDocumentController::class)

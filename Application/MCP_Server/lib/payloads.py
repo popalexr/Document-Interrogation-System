@@ -37,6 +37,12 @@ class VectorizePayload(BaseModel):
     user_id: str
     extra: Optional[Dict[str, Any]] = None
 
+class VectorSearchPayload(BaseModel):
+    user_id: str
+    query: str
+    max_num_results: int = 10
+    extra: Optional[Dict[str, Any]] = None
+
 class DeleteDocumentPayload(BaseModel):
     document_id: str
     user_id: str
