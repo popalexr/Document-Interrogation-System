@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { home as dashboard } from '@/routes/dashboard';
 import { index as interrogations_index } from '@/routes/interrogations';
+import { index as recent_files_index } from '@/routes/recent-documents';
 import { index as trash_index } from '@/routes/trash';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
@@ -31,7 +32,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Recent files',
-        href: '#',
+        href: recent_files_index(),
         icon: File,
     },
     {

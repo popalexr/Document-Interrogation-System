@@ -7,6 +7,7 @@ Route::get('/', WelcomeController::class)->name('home');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/dashboard.php';
+require __DIR__.'/recent-documents.php';
 require __DIR__.'/documents.php';
 require __DIR__.'/interrogations.php';
 require __DIR__.'/chats.php';
