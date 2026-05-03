@@ -64,7 +64,7 @@ const emit = defineEmits<{
         <div
             class="grid h-10 shrink-0 grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b bg-muted/30 px-4 text-xs text-muted-foreground"
         >
-            <div class="flex justify-center">
+            <div class="flex justify-start">
                 <Star class="size-4" />
             </div>
             <div>Document</div>
@@ -92,11 +92,11 @@ const emit = defineEmits<{
                         @click="emit('select', upload)"
                         @dblclick="emit('view', upload)"
                     >
-                        <div class="flex justify-center" @click.stop>
+                        <div class="flex justify-start" @click.stop>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                class="size-8"
+                                class="-ml-2 size-8"
                                 :disabled="favoriteDocumentId === upload._id"
                                 :aria-label="
                                     upload.favorite
