@@ -62,7 +62,7 @@ const emit = defineEmits<{
         class="flex max-h-[42rem] flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-xs"
     >
         <div
-            class="grid h-10 shrink-0 grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b bg-muted/30 px-4 text-xs text-muted-foreground"
+            class="hidden h-10 shrink-0 grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b bg-muted/30 px-4 text-xs text-muted-foreground lg:grid"
         >
             <div class="flex justify-start">
                 <Star class="size-4" />
@@ -81,317 +81,725 @@ const emit = defineEmits<{
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-auto">
-            <ContextMenu v-for="upload in uploads" :key="upload._id">
-                <ContextMenuTrigger as-child>
-                    <div
-                        class="grid min-h-16 cursor-pointer grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b px-4 transition-colors hover:bg-muted/30"
-                        :class="{
-                            'bg-blue-50/70 hover:bg-blue-50':
-                                selectedDocumentId === upload._id,
-                        }"
-                        @click="emit('select', upload)"
-                        @dblclick="emit('view', upload)"
-                    >
-                        <div class="flex justify-start" @click.stop>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="-ml-2 size-8"
-                                :disabled="favoriteDocumentId === upload._id"
-                                :aria-label="
-                                    upload.favorite
-                                        ? 'Remove from favorites'
-                                        : 'Mark as favorite'
-                                "
-                                @click="emit('toggleFavorite', upload)"
-                            >
-                                <Star
-                                    class="size-5"
-                                    :class="
-                                        upload.favorite
-                                            ? 'fill-amber-400 text-amber-500'
-                                            : 'text-muted-foreground'
-                                    "
-                                />
-                            </Button>
-                        </div>
-
-                        <div class="flex min-w-0 items-center gap-3">
-                            <DocumentIcon
-                                :icon="documentIcon(upload)"
-                                class="size-9 shrink-0"
-                            />
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium">
-                                    {{ upload.original_name }}
-                                </p>
-                                <p
-                                    class="mt-0.5 truncate text-xs text-muted-foreground"
-                                >
-                                    {{ formatSize(upload.size) }}
-                                    <span class="px-1">&middot;</span>
-                                    Uploaded {{ formatDate(upload.created_at) }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <Badge
-                                variant="outline"
-                                :class="extClasses(fileExt(upload))"
-                            >
-                                {{ fileExt(upload) || 'FILE' }}
-                            </Badge>
-                        </div>
-
-                        <div>
-                            <DocumentStatusBadge
-                                :upload="upload"
-                                show-spinner
-                            />
-                            <p class="mt-1 text-xs text-muted-foreground">
-                                {{ statusDescription(upload) }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="flex items-center justify-end gap-2"
-                            @click.stop
+            <div class="lg:hidden">
+                <ContextMenu v-for="upload in uploads" :key="upload._id">
+                    <ContextMenuTrigger as-child>
+                        <article
+                            class="cursor-pointer border-b p-4 transition-colors hover:bg-muted/30"
+                            :class="{
+                                'bg-blue-50/70 hover:bg-blue-50':
+                                    selectedDocumentId === upload._id,
+                            }"
+                            @click="emit('select', upload)"
+                            @dblclick="emit('view', upload)"
                         >
-                            <Button
-                                v-if="canAskAi(upload)"
-                                variant="outline"
-                                size="sm"
-                                class="gap-2"
-                                as-child
-                            >
-                                <Link
-                                    :href="
-                                        documents.interrogate.url({
-                                            query: { id: upload._id },
-                                        })
-                                    "
-                                    prefetch
-                                >
-                                    <Sparkles class="size-4 text-blue-600" />
-                                    Ask AI
-                                </Link>
-                            </Button>
-                            <Button
-                                v-else-if="statusKind(upload) === 'failed'"
-                                variant="outline"
-                                size="sm"
-                                class="gap-2"
-                            >
-                                <RefreshCcw class="size-4" />
-                                Retry
-                            </Button>
-                            <Button
-                                v-else-if="statusKind(upload) === 'not_indexed'"
-                                variant="outline"
-                                size="sm"
-                                class="gap-2"
-                            >
-                                <Play class="size-4" />
-                                Index
-                            </Button>
-                            <Button
-                                v-else
-                                variant="outline"
-                                size="sm"
-                                class="gap-2"
-                                disabled
-                            >
-                                <Sparkles class="size-4" />
-                                Ask AI
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="gap-2"
-                                as-child
-                            >
-                                <Link
-                                    :href="
-                                        documents.view.url({
-                                            query: { id: upload._id },
-                                        })
-                                    "
-                                    prefetch
-                                >
-                                    <FileText class="size-4" />
-                                    View
-                                </Link>
-                            </Button>
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger as-child>
+                            <div class="flex items-start gap-3">
+                                <div @click.stop>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8"
+                                        class="-ml-2 size-8"
+                                        :disabled="
+                                            favoriteDocumentId === upload._id
+                                        "
+                                        :aria-label="
+                                            upload.favorite
+                                                ? 'Remove from favorites'
+                                                : 'Mark as favorite'
+                                        "
+                                        @click="emit('toggleFavorite', upload)"
                                     >
-                                        <MoreVertical class="size-4" />
+                                        <Star
+                                            class="size-5"
+                                            :class="
+                                                upload.favorite
+                                                    ? 'fill-amber-400 text-amber-500'
+                                                    : 'text-muted-foreground'
+                                            "
+                                        />
                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" class="w-44">
-                                    <DropdownMenuItem :as-child="true">
-                                        <Link
-                                            as="button"
-                                            class="block w-full cursor-pointer text-left"
-                                            :href="
-                                                documents.view.url({
-                                                    query: { id: upload._id },
-                                                })
-                                            "
-                                            prefetch
-                                        >
-                                            <FileText class="mr-2 size-4" />
-                                            View
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem :as-child="true">
-                                        <a
-                                            class="block w-full cursor-pointer text-left"
-                                            :href="
-                                                documents.downloadDocument.url({
-                                                    query: { id: upload._id },
-                                                })
-                                            "
-                                            target="_blank"
-                                            rel="noopener"
-                                        >
-                                            <Download class="mr-2 size-4" />
-                                            Download
-                                        </a>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem :as-child="true">
-                                        <Link
-                                            as="button"
-                                            class="block w-full cursor-pointer text-left"
-                                            :href="
-                                                documents.interrogate.url({
-                                                    query: { id: upload._id },
-                                                })
-                                            "
-                                            prefetch
-                                        >
-                                            <MessageSquareText
-                                                class="mr-2 size-4"
-                                            />
-                                            Interrogate
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem :as-child="true">
-                                        <Link
-                                            as="button"
-                                            class="block w-full cursor-pointer text-left"
-                                            :href="
-                                                documents.edit.url({
-                                                    query: { id: upload._id },
-                                                })
-                                            "
-                                            prefetch
-                                        >
-                                            <Edit3 class="mr-2 size-4" />
-                                            Edit
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        class="text-destructive"
-                                        :as-child="true"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="flex w-full items-center"
-                                            @click="emit('delete', upload)"
-                                        >
-                                            <Trash2 class="mr-2 size-4" />
-                                            Delete
-                                        </button>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    </div>
-                </ContextMenuTrigger>
+                                </div>
 
-                <ContextMenuContent class="w-44">
-                    <ContextMenuItem :as-child="true">
-                        <Link
-                            as="button"
-                            class="block w-full cursor-pointer text-left"
-                            :href="
-                                documents.view.url({
-                                    query: { id: upload._id },
-                                })
-                            "
-                            prefetch
+                                <DocumentIcon
+                                    :icon="documentIcon(upload)"
+                                    class="mt-0.5 size-10 shrink-0"
+                                />
+
+                                <div class="min-w-0 flex-1">
+                                    <div
+                                        class="flex items-start justify-between gap-2"
+                                    >
+                                        <div class="min-w-0">
+                                            <p
+                                                class="truncate text-sm font-medium"
+                                            >
+                                                {{ upload.original_name }}
+                                            </p>
+                                            <p
+                                                class="mt-0.5 text-xs text-muted-foreground"
+                                            >
+                                                {{ formatSize(upload.size) }}
+                                                <span class="px-1"
+                                                    >&middot;</span
+                                                >
+                                                Uploaded
+                                                {{
+                                                    formatDate(
+                                                        upload.created_at,
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
+
+                                        <div @click.stop>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        class="size-8"
+                                                    >
+                                                        <MoreVertical
+                                                            class="size-4"
+                                                        />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent
+                                                    align="end"
+                                                    class="w-44"
+                                                >
+                                                    <DropdownMenuItem
+                                                        :as-child="true"
+                                                    >
+                                                        <Link
+                                                            as="button"
+                                                            class="block w-full cursor-pointer text-left"
+                                                            :href="
+                                                                documents.view.url(
+                                                                    {
+                                                                        query: {
+                                                                            id: upload._id,
+                                                                        },
+                                                                    },
+                                                                )
+                                                            "
+                                                            prefetch
+                                                        >
+                                                            <FileText
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            View
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        :as-child="true"
+                                                    >
+                                                        <a
+                                                            class="block w-full cursor-pointer text-left"
+                                                            :href="
+                                                                documents.downloadDocument.url(
+                                                                    {
+                                                                        query: {
+                                                                            id: upload._id,
+                                                                        },
+                                                                    },
+                                                                )
+                                                            "
+                                                            target="_blank"
+                                                            rel="noopener"
+                                                        >
+                                                            <Download
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            Download
+                                                        </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        :as-child="true"
+                                                    >
+                                                        <Link
+                                                            as="button"
+                                                            class="block w-full cursor-pointer text-left"
+                                                            :href="
+                                                                documents.interrogate.url(
+                                                                    {
+                                                                        query: {
+                                                                            id: upload._id,
+                                                                        },
+                                                                    },
+                                                                )
+                                                            "
+                                                            prefetch
+                                                        >
+                                                            <MessageSquareText
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            Interrogate
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        :as-child="true"
+                                                    >
+                                                        <Link
+                                                            as="button"
+                                                            class="block w-full cursor-pointer text-left"
+                                                            :href="
+                                                                documents.edit.url(
+                                                                    {
+                                                                        query: {
+                                                                            id: upload._id,
+                                                                        },
+                                                                    },
+                                                                )
+                                                            "
+                                                            prefetch
+                                                        >
+                                                            <Edit3
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            Edit
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        class="text-destructive"
+                                                        :as-child="true"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="flex w-full items-center"
+                                                            @click="
+                                                                emit(
+                                                                    'delete',
+                                                                    upload,
+                                                                )
+                                                            "
+                                                        >
+                                                            <Trash2
+                                                                class="mr-2 size-4"
+                                                            />
+                                                            Delete
+                                                        </button>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <Badge
+                                            variant="outline"
+                                            :class="extClasses(fileExt(upload))"
+                                        >
+                                            {{ fileExt(upload) || 'FILE' }}
+                                        </Badge>
+                                        <DocumentStatusBadge
+                                            :upload="upload"
+                                            show-spinner
+                                        />
+                                    </div>
+
+                                    <p
+                                        class="mt-2 text-xs text-muted-foreground"
+                                    >
+                                        {{ statusDescription(upload) }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="mt-4 grid gap-2 sm:grid-cols-2"
+                                @click.stop
+                            >
+                                <Button
+                                    v-if="canAskAi(upload)"
+                                    variant="outline"
+                                    size="sm"
+                                    class="w-full justify-center gap-2"
+                                    as-child
+                                >
+                                    <Link
+                                        :href="
+                                            documents.interrogate.url({
+                                                query: { id: upload._id },
+                                            })
+                                        "
+                                        prefetch
+                                    >
+                                        <Sparkles
+                                            class="size-4 text-blue-600"
+                                        />
+                                        Ask AI
+                                    </Link>
+                                </Button>
+                                <Button
+                                    v-else-if="statusKind(upload) === 'failed'"
+                                    variant="outline"
+                                    size="sm"
+                                    class="w-full justify-center gap-2"
+                                >
+                                    <RefreshCcw class="size-4" />
+                                    Retry
+                                </Button>
+                                <Button
+                                    v-else-if="
+                                        statusKind(upload) === 'not_indexed'
+                                    "
+                                    variant="outline"
+                                    size="sm"
+                                    class="w-full justify-center gap-2"
+                                >
+                                    <Play class="size-4" />
+                                    Index
+                                </Button>
+                                <Button
+                                    v-else
+                                    variant="outline"
+                                    size="sm"
+                                    class="w-full justify-center gap-2"
+                                    disabled
+                                >
+                                    <Sparkles class="size-4" />
+                                    Ask AI
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="w-full justify-center gap-2"
+                                    as-child
+                                >
+                                    <Link
+                                        :href="
+                                            documents.view.url({
+                                                query: { id: upload._id },
+                                            })
+                                        "
+                                        prefetch
+                                    >
+                                        <FileText class="size-4" />
+                                        View
+                                    </Link>
+                                </Button>
+                            </div>
+                        </article>
+                    </ContextMenuTrigger>
+
+                    <ContextMenuContent class="w-44">
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.view.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <FileText class="mr-2 size-4" />
+                                View
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <a
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.downloadDocument.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <Download class="mr-2 size-4" />
+                                Download
+                            </a>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.interrogate.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <MessageSquareText class="mr-2 size-4" />
+                                Interrogate
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.edit.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <Edit3 class="mr-2 size-4" />
+                                Edit
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                            class="text-destructive"
+                            :as-child="true"
                         >
-                            <FileText class="mr-2 size-4" />
-                            View
-                        </Link>
-                    </ContextMenuItem>
-                    <ContextMenuItem :as-child="true">
-                        <a
-                            class="block w-full cursor-pointer text-left"
-                            :href="
-                                documents.downloadDocument.url({
-                                    query: { id: upload._id },
-                                })
-                            "
-                            target="_blank"
-                            rel="noopener"
+                            <button
+                                type="button"
+                                class="flex w-full items-center"
+                                @click="emit('delete', upload)"
+                            >
+                                <Trash2 class="mr-2 size-4" />
+                                Delete
+                            </button>
+                        </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
+            </div>
+
+            <div class="hidden lg:block">
+                <ContextMenu v-for="upload in uploads" :key="upload._id">
+                    <ContextMenuTrigger as-child>
+                        <div
+                            class="grid min-h-16 cursor-pointer grid-cols-[3rem_minmax(18rem,1.6fr)_7rem_12rem_17rem] items-center border-b px-4 transition-colors hover:bg-muted/30"
+                            :class="{
+                                'bg-blue-50/70 hover:bg-blue-50':
+                                    selectedDocumentId === upload._id,
+                            }"
+                            @click="emit('select', upload)"
+                            @dblclick="emit('view', upload)"
                         >
-                            <Download class="mr-2 size-4" />
-                            Download
-                        </a>
-                    </ContextMenuItem>
-                    <ContextMenuItem :as-child="true">
-                        <Link
-                            as="button"
-                            class="block w-full cursor-pointer text-left"
-                            :href="
-                                documents.interrogate.url({
-                                    query: { id: upload._id },
-                                })
-                            "
-                            prefetch
+                            <div class="flex justify-start" @click.stop>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="-ml-2 size-8"
+                                    :disabled="
+                                        favoriteDocumentId === upload._id
+                                    "
+                                    :aria-label="
+                                        upload.favorite
+                                            ? 'Remove from favorites'
+                                            : 'Mark as favorite'
+                                    "
+                                    @click="emit('toggleFavorite', upload)"
+                                >
+                                    <Star
+                                        class="size-5"
+                                        :class="
+                                            upload.favorite
+                                                ? 'fill-amber-400 text-amber-500'
+                                                : 'text-muted-foreground'
+                                        "
+                                    />
+                                </Button>
+                            </div>
+
+                            <div class="flex min-w-0 items-center gap-3">
+                                <DocumentIcon
+                                    :icon="documentIcon(upload)"
+                                    class="size-9 shrink-0"
+                                />
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">
+                                        {{ upload.original_name }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 truncate text-xs text-muted-foreground"
+                                    >
+                                        {{ formatSize(upload.size) }}
+                                        <span class="px-1">&middot;</span>
+                                        Uploaded
+                                        {{ formatDate(upload.created_at) }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Badge
+                                    variant="outline"
+                                    :class="extClasses(fileExt(upload))"
+                                >
+                                    {{ fileExt(upload) || 'FILE' }}
+                                </Badge>
+                            </div>
+
+                            <div>
+                                <DocumentStatusBadge
+                                    :upload="upload"
+                                    show-spinner
+                                />
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    {{ statusDescription(upload) }}
+                                </p>
+                            </div>
+
+                            <div
+                                class="flex items-center justify-end gap-2"
+                                @click.stop
+                            >
+                                <Button
+                                    v-if="canAskAi(upload)"
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                    as-child
+                                >
+                                    <Link
+                                        :href="
+                                            documents.interrogate.url({
+                                                query: { id: upload._id },
+                                            })
+                                        "
+                                        prefetch
+                                    >
+                                        <Sparkles
+                                            class="size-4 text-blue-600"
+                                        />
+                                        Ask AI
+                                    </Link>
+                                </Button>
+                                <Button
+                                    v-else-if="statusKind(upload) === 'failed'"
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                >
+                                    <RefreshCcw class="size-4" />
+                                    Retry
+                                </Button>
+                                <Button
+                                    v-else-if="
+                                        statusKind(upload) === 'not_indexed'
+                                    "
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                >
+                                    <Play class="size-4" />
+                                    Index
+                                </Button>
+                                <Button
+                                    v-else
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                    disabled
+                                >
+                                    <Sparkles class="size-4" />
+                                    Ask AI
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                    as-child
+                                >
+                                    <Link
+                                        :href="
+                                            documents.view.url({
+                                                query: { id: upload._id },
+                                            })
+                                        "
+                                        prefetch
+                                    >
+                                        <FileText class="size-4" />
+                                        View
+                                    </Link>
+                                </Button>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger as-child>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8"
+                                        >
+                                            <MoreVertical class="size-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        class="w-44"
+                                    >
+                                        <DropdownMenuItem :as-child="true">
+                                            <Link
+                                                as="button"
+                                                class="block w-full cursor-pointer text-left"
+                                                :href="
+                                                    documents.view.url({
+                                                        query: {
+                                                            id: upload._id,
+                                                        },
+                                                    })
+                                                "
+                                                prefetch
+                                            >
+                                                <FileText class="mr-2 size-4" />
+                                                View
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem :as-child="true">
+                                            <a
+                                                class="block w-full cursor-pointer text-left"
+                                                :href="
+                                                    documents.downloadDocument.url(
+                                                        {
+                                                            query: {
+                                                                id: upload._id,
+                                                            },
+                                                        },
+                                                    )
+                                                "
+                                                target="_blank"
+                                                rel="noopener"
+                                            >
+                                                <Download class="mr-2 size-4" />
+                                                Download
+                                            </a>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem :as-child="true">
+                                            <Link
+                                                as="button"
+                                                class="block w-full cursor-pointer text-left"
+                                                :href="
+                                                    documents.interrogate.url({
+                                                        query: {
+                                                            id: upload._id,
+                                                        },
+                                                    })
+                                                "
+                                                prefetch
+                                            >
+                                                <MessageSquareText
+                                                    class="mr-2 size-4"
+                                                />
+                                                Interrogate
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem :as-child="true">
+                                            <Link
+                                                as="button"
+                                                class="block w-full cursor-pointer text-left"
+                                                :href="
+                                                    documents.edit.url({
+                                                        query: {
+                                                            id: upload._id,
+                                                        },
+                                                    })
+                                                "
+                                                prefetch
+                                            >
+                                                <Edit3 class="mr-2 size-4" />
+                                                Edit
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            class="text-destructive"
+                                            :as-child="true"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="flex w-full items-center"
+                                                @click="emit('delete', upload)"
+                                            >
+                                                <Trash2 class="mr-2 size-4" />
+                                                Delete
+                                            </button>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+                    </ContextMenuTrigger>
+
+                    <ContextMenuContent class="w-44">
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.view.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <FileText class="mr-2 size-4" />
+                                View
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <a
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.downloadDocument.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <Download class="mr-2 size-4" />
+                                Download
+                            </a>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.interrogate.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <MessageSquareText class="mr-2 size-4" />
+                                Interrogate
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuItem :as-child="true">
+                            <Link
+                                as="button"
+                                class="block w-full cursor-pointer text-left"
+                                :href="
+                                    documents.edit.url({
+                                        query: { id: upload._id },
+                                    })
+                                "
+                                prefetch
+                            >
+                                <Edit3 class="mr-2 size-4" />
+                                Edit
+                            </Link>
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                            class="text-destructive"
+                            :as-child="true"
                         >
-                            <MessageSquareText class="mr-2 size-4" />
-                            Interrogate
-                        </Link>
-                    </ContextMenuItem>
-                    <ContextMenuItem :as-child="true">
-                        <Link
-                            as="button"
-                            class="block w-full cursor-pointer text-left"
-                            :href="
-                                documents.edit.url({
-                                    query: { id: upload._id },
-                                })
-                            "
-                            prefetch
-                        >
-                            <Edit3 class="mr-2 size-4" />
-                            Edit
-                        </Link>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem class="text-destructive" :as-child="true">
-                        <button
-                            type="button"
-                            class="flex w-full items-center"
-                            @click="emit('delete', upload)"
-                        >
-                            <Trash2 class="mr-2 size-4" />
-                            Delete
-                        </button>
-                    </ContextMenuItem>
-                </ContextMenuContent>
-            </ContextMenu>
+                            <button
+                                type="button"
+                                class="flex w-full items-center"
+                                @click="emit('delete', upload)"
+                            >
+                                <Trash2 class="mr-2 size-4" />
+                                Delete
+                            </button>
+                        </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
+            </div>
         </div>
     </div>
 </template>

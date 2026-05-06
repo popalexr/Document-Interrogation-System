@@ -17,12 +17,15 @@ import {
 import { computed } from 'vue';
 import type { SortKey, StatusFilter } from './types';
 
-withDefaults(defineProps<{
-    documentTypes: string[];
-    showUploadButton?: boolean;
-}>(), {
-    showUploadButton: true,
-});
+withDefaults(
+    defineProps<{
+        documentTypes: string[];
+        showUploadButton?: boolean;
+    }>(),
+    {
+        showUploadButton: true,
+    },
+);
 
 const searchQuery = defineModel<string>('searchQuery', { required: true });
 const statusFilter = defineModel<StatusFilter>('statusFilter', {
@@ -44,9 +47,11 @@ const sortLabel = computed(() => {
 </script>
 
 <template>
-    <div class="mb-6 flex flex-wrap items-center gap-3">
+    <div
+        class="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
+    >
         <label
-            class="flex h-10 min-w-[18rem] items-center gap-2 rounded-md border bg-background px-3 text-sm shadow-xs"
+            class="flex h-10 w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 text-sm shadow-xs sm:min-w-[18rem] sm:flex-1"
         >
             <Search class="size-4 text-muted-foreground" />
             <input
@@ -59,7 +64,10 @@ const sortLabel = computed(() => {
 
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="gap-2">
+                <Button
+                    variant="outline"
+                    class="w-full justify-between gap-2 sm:w-auto"
+                >
                     <SlidersHorizontal class="size-4" />
                     Status:
                     <span class="font-medium capitalize">
@@ -89,7 +97,10 @@ const sortLabel = computed(() => {
 
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="gap-2">
+                <Button
+                    variant="outline"
+                    class="w-full justify-between gap-2 sm:w-auto"
+                >
                     <FileText class="size-4" />
                     Type:
                     <span class="font-medium">{{ typeLabel }}</span>
@@ -112,7 +123,10 @@ const sortLabel = computed(() => {
 
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="gap-2">
+                <Button
+                    variant="outline"
+                    class="w-full justify-between gap-2 sm:w-auto"
+                >
                     <ArrowDownUp class="size-4" />
                     Sort:
                     <span class="font-medium">{{ sortLabel }}</span>
@@ -132,11 +146,11 @@ const sortLabel = computed(() => {
             </DropdownMenuContent>
         </DropdownMenu>
 
-        <div v-if="showUploadButton" class="ml-auto">
+        <div v-if="showUploadButton" class="w-full sm:ml-auto sm:w-auto">
             <UploadButton
                 label="Upload Documents"
                 variant="default"
-                trigger-class="gap-2"
+                trigger-class="w-full gap-2 sm:w-auto"
             />
         </div>
     </div>

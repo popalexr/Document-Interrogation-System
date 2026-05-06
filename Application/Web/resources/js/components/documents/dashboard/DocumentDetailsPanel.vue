@@ -35,9 +35,9 @@ const emit = defineEmits<{
 
 <template>
     <aside
-        class="flex w-[26rem] shrink-0 flex-col rounded-lg border bg-background shadow-xs"
+        class="flex w-full shrink-0 flex-col rounded-lg border bg-background shadow-xs xl:w-[26rem]"
     >
-        <div class="flex items-center justify-between p-5">
+        <div class="flex items-center justify-between p-4 sm:p-5">
             <h2 class="font-semibold">Document details</h2>
             <Button
                 variant="ghost"
@@ -49,8 +49,8 @@ const emit = defineEmits<{
             </Button>
         </div>
 
-        <div class="space-y-5 px-5 pb-6">
-            <div class="flex items-center gap-3">
+        <div class="space-y-5 px-4 pb-5 sm:px-5 sm:pb-6">
+            <div class="flex items-start gap-3 sm:items-center">
                 <DocumentIcon
                     :icon="documentIcon(upload)"
                     class="size-12 shrink-0"
@@ -74,7 +74,7 @@ const emit = defineEmits<{
                 </span>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button v-if="canAskAi(upload)" class="gap-2" as-child>
                     <Link
                         :href="
@@ -113,38 +113,50 @@ const emit = defineEmits<{
             </div>
 
             <dl class="space-y-4 text-sm">
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">Upload date</dt>
-                    <dd class="text-right">
+                    <dd class="break-words sm:text-right">
                         {{ formatDate(upload.created_at) }}
                     </dd>
                 </div>
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">MIME type</dt>
-                    <dd class="text-right break-words">
+                    <dd class="break-words sm:text-right">
                         {{ upload.mime_type }}
                     </dd>
                 </div>
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">Size</dt>
-                    <dd class="text-right">
+                    <dd class="break-words sm:text-right">
                         {{ formatSize(upload.size) }}
                     </dd>
                 </div>
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">Owner</dt>
-                    <dd class="text-right">{{ ownerName }}</dd>
+                    <dd class="break-words sm:text-right">{{ ownerName }}</dd>
                 </div>
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">Last modify</dt>
-                    <dd class="text-right">
+                    <dd class="break-words sm:text-right">
                         {{ formatDate(upload.updated_at ?? upload.created_at) }}
                     </dd>
                 </div>
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4">
+                <div
+                    class="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+                >
                     <dt class="text-muted-foreground">Searchable</dt>
                     <dd
-                        class="flex items-center justify-end gap-1"
+                        class="flex items-center gap-1 sm:justify-end"
                         :class="
                             canAskAi(upload)
                                 ? 'text-green-600'
@@ -158,7 +170,7 @@ const emit = defineEmits<{
             </dl>
         </div>
 
-        <div class="mt-auto border-t p-5">
+        <div class="mt-auto border-t p-4 sm:p-5">
             <h3 class="mb-3 text-sm font-semibold">Actions</h3>
             <Button
                 variant="outline"
@@ -180,7 +192,7 @@ const emit = defineEmits<{
             </Button>
         </div>
 
-        <div class="border-t p-5">
+        <div class="border-t p-4 sm:p-5">
             <button
                 type="button"
                 class="inline-flex items-center gap-2 text-sm font-medium text-red-600"

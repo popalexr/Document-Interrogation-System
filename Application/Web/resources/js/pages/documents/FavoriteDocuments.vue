@@ -167,9 +167,9 @@ function toggleFavorite(upload: UploadItem) {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <main
-            class="flex h-full min-h-0 flex-col overflow-hidden bg-background px-6 py-6"
+            class="flex h-full min-h-0 flex-col overflow-hidden bg-background px-4 py-4 sm:px-6 sm:py-6"
         >
-            <div class="flex min-h-0 flex-1 gap-6">
+            <div class="flex min-h-0 flex-1 flex-col gap-6 xl:flex-row">
                 <section class="flex min-h-0 min-w-0 flex-1 flex-col">
                     <div class="mb-6">
                         <h1 class="text-2xl font-semibold">Favorites</h1>
@@ -188,6 +188,15 @@ function toggleFavorite(upload: UploadItem) {
                         :show-upload-button="false"
                     />
 
+                    <DocumentDetailsPanel
+                        v-if="selectedDocument"
+                        class="mb-6 xl:hidden"
+                        :upload="selectedDocument"
+                        :owner-name="user.name"
+                        @close="closeDetails"
+                        @delete="openDeleteDialog"
+                    />
+
                     <DocumentsTable
                         :uploads="filteredDocuments"
                         :selected-document-id="selectedDocumentId"
@@ -201,6 +210,7 @@ function toggleFavorite(upload: UploadItem) {
 
                 <DocumentDetailsPanel
                     v-if="selectedDocument"
+                    class="hidden xl:flex"
                     :upload="selectedDocument"
                     :owner-name="user.name"
                     @close="closeDetails"
