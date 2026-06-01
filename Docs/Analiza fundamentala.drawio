@@ -1,4 +1,4 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5" pages="3">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5" pages="5">
   <diagram id="FDCjuTTlrM4zk6ikMlYo" name="Flux chunking, index &amp; Information Retreival">
     <mxGraphModel dx="1426" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -175,6 +175,151 @@
         </mxCell>
         <mxCell id="5HQuQE_QoC4BTYYrbBMe-1" value="Index vectorial" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="430" y="45" width="60" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="3jR4XWFj5rwgte7GNjqX" name="Arhitectura MCP">
+    <mxGraphModel dx="1426" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-24" style="edgeStyle=orthogonalEdgeStyle;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-2" target="ruYmUVGeXhBNHZj-IzNR-21" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-29" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-2" target="ruYmUVGeXhBNHZj-IzNR-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-2" value="Host MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="270" y="120" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-30" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-3" target="ruYmUVGeXhBNHZj-IzNR-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-32" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-3" target="ruYmUVGeXhBNHZj-IzNR-4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-3" value="Client MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="270" y="210" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-33" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-4" target="ruYmUVGeXhBNHZj-IzNR-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-4" target="ruYmUVGeXhBNHZj-IzNR-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-4" target="ruYmUVGeXhBNHZj-IzNR-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-4" value="Server MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="270" y="300" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-5" value="Resurse&lt;div&gt;fișiere, documente, baze de date&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+          <mxGeometry x="65" y="390" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-43" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-6" target="ruYmUVGeXhBNHZj-IzNR-4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-6" value="Tool-uri&lt;div&gt;funcții, API-uri, operații&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+          <mxGeometry x="240" y="390" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-7" value="Prompturi&lt;div&gt;template-uri reutilizabile&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+          <mxGeometry x="415" y="390" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-23" style="edgeStyle=orthogonalEdgeStyle;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="ruYmUVGeXhBNHZj-IzNR-21" target="ruYmUVGeXhBNHZj-IzNR-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-21" value="Utilizator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="95" y="120" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-31" value="Cerere către model" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="285" y="170" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ruYmUVGeXhBNHZj-IzNR-34" value="Mesaje MCP" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="285" y="260" width="60" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="bjntuy1-jF4dzRR5nLBH" name="Flux editare LLM">
+    <mxGraphModel dx="1426" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-2" target="Vb3CHAC4r3saEVvDNZkF-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-2" value="" style="ellipse;fillColor=strokeColor;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="50" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-3" target="Vb3CHAC4r3saEVvDNZkF-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-3" value="Cerere în limbaj natural" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="317.5" y="100" width="115" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-5" target="Vb3CHAC4r3saEVvDNZkF-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-5" value="Identificarea secvenței relevante" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="317.5" y="160" width="115" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-7" target="Vb3CHAC4r3saEVvDNZkF-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-7" value="" style="rhombus;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="360" y="220" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-9" target="Vb3CHAC4r3saEVvDNZkF-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-9" value="Construirea promptului cu instrucțiuni și context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="308.75" y="270" width="132.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-11" target="Vb3CHAC4r3saEVvDNZkF-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-11" value="Generarea propunerii de editare" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="308.75" y="330" width="132.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-17" value="da" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-14" target="Vb3CHAC4r3saEVvDNZkF-16">
+          <mxGeometry x="-0.75" y="-10" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-19" value="nu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-14" target="Vb3CHAC4r3saEVvDNZkF-18">
+          <mxGeometry x="-0.7778" y="10" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-14" value="Validare utilizator?" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="315" y="390" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-16" target="Vb3CHAC4r3saEVvDNZkF-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-16" value="Aplicarea modificării în document" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="170" y="390" width="115" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-18" target="Vb3CHAC4r3saEVvDNZkF-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-18" value="Respinge sau ajustare" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="470" y="390" width="115" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-22" value="da" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-20" target="Vb3CHAC4r3saEVvDNZkF-7">
+          <mxGeometry x="-0.9588" y="10" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Vb3CHAC4r3saEVvDNZkF-20" target="Vb3CHAC4r3saEVvDNZkF-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-20" value="Se reia editarea?" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="620" y="390" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Vb3CHAC4r3saEVvDNZkF-23" value="" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1">
+          <mxGeometry x="360" y="450" width="30" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
