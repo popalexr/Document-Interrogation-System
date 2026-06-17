@@ -69,7 +69,7 @@ class SaveEditedFileAsNewController extends Controller
 
         FileUpload::dispatch($upload->_id);
 
-        return redirect()->route('dashboard.home')->with('success', 'You saved the edited file as a new upload successfully.');
+        return redirect()->route('dashboard')->with('success', 'You saved the edited file as a new upload successfully.');
     }
 
     private function getEditableFile(string $fileId, string $userId): ?Edit

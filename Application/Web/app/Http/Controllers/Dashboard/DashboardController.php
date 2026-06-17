@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Upload;
+use App\Repositories\UploadRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -13,7 +13,10 @@ class DashboardController extends Controller
 {
     private $userId;
 
-    public function __construct(private Request $request)
+    public function __construct(
+        private Request $request,
+        private UploadRepository $uploads,
+    )
     {
         $this->userId = optional($request->user())->getKey();
     }
@@ -39,34 +42,6 @@ class DashboardController extends Controller
             return collect();
         }
 
-        return Upload::query()
-            ->where('user_id', $this->userId)
-            ->whereNull('deleted_at')
-            ->orderByDesc('created_at')
-            ->limit(100)
-            ->get([
-                '_id',
-                'original_name',
-                'mime_type',
-                'size',
-                'status',
-                'r2_key',
-                'favorite',
-                'created_at',
-                'updated_at',
-            ])
-            ->map(function ($u) {
-                return [
-                    '_id' => (string) $u->_id,
-                    'original_name' => $u->original_name,
-                    'mime_type' => $u->mime_type,
-                    'size' => (int) $u->size,
-                    'status' => (string) $u->status,
-                    'r2_key' => (string) $u->r2_key,
-                    'favorite' => (bool) $u->favorite,
-                    'created_at' => $u->created_at,
-                    'updated_at' => $u->updated_at,
-                ];
-            });
+        return $this->uploads->dashboardUploadsForUser((string) $this->userId);
     }
 }

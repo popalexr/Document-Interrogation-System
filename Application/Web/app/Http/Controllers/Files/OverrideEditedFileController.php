@@ -68,7 +68,7 @@ class OverrideEditedFileController extends Controller
 
         FileUpload::dispatch($upload->_id);
 
-        return redirect()->route('dashboard.home')->with('success', 'You overrode the file with the edited version successfully.');
+        return redirect()->route('dashboard')->with('success', 'You overrode the file with the edited version successfully.');
     }
 
     private function getEditableFile(string $fileId, string $userId): ?Edit

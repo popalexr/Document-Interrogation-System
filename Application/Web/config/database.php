@@ -115,7 +115,7 @@ return [
         'mongodb' => [
             'driver' => 'mongodb',
             'dsn' => env('MONGODB_URI', ''),
-            'database' => env('DB_DATABASE', 'laravel'),
+            'database' => env('MONGODB_DATABASE', env('DB_DATABASE', 'laravel')),
         ],
 
     ],
