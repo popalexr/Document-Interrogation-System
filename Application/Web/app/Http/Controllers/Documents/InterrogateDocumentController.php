@@ -7,7 +7,7 @@ use App\Http\Requests\Interrogations\DocumentInterrogationRequest;
 use App\Models\Chat;
 use App\Models\Interrogation;
 use App\Models\Upload;
-use GuzzleHttp\Client;
+use App\Services\McpStreamClient;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +22,10 @@ class InterrogateDocumentController extends Controller
 
     private ?Upload $document = null;
 
-    public function __construct(private Request $request)
+    public function __construct(
+        private Request $request,
+        private McpStreamClient $mcpClient,
+    )
     {
         $this->userId = optional($request->user())->getKey();
         $this->documentId = (string) $request->query('id', null);
@@ -87,6 +90,12 @@ class InterrogateDocumentController extends Controller
         $chatId = $request['chat_id'] ?? null;
         $newChat = false;
 
+        if (blank($this->findOwnedDocument($documentId))) {
+            return response()->json([
+                'message' => 'Document not found.',
+            ], 404);
+        }
+
         if (blank($chatId)) {
             $chatId = $this->createNewChat($documentId);
             $newChat = true;
@@ -116,22 +125,8 @@ class InterrogateDocumentController extends Controller
             config('mcp.query_endpoint')
         );
 
-        // Use raw Guzzle to avoid Laravel Http client buffering
-        $client = new Client([
-            'timeout'      => 120,
-            'connect_timeout' => 10,
-            'http_errors'  => false, // don't throw on 4xx/5xx
-        ]);
-
         try {
-            $response = $client->post($mcpUrl, [
-                'stream'  => true, // IMPORTANT: streaming
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept'       => 'text/event-stream',
-                ],
-                'body'    => json_encode($payload),
-            ]);
+            $response = $this->mcpClient->postStream($mcpUrl, $payload);
         } catch (\Throwable $e) {
             return response()->json([
                 'error'   => 'Failed to communicate with MCP server.',
@@ -156,7 +151,9 @@ class InterrogateDocumentController extends Controller
             // Disable PHP output buffering and compression so SSE can flush
             @ini_set('output_buffering', '0');
             @ini_set('zlib.output_compression', '0');
-            while (ob_get_level() > 0) { @ob_end_flush(); }
+            if (! app()->environment('testing')) {
+                while (ob_get_level() > 0) { @ob_end_flush(); }
+            }
             ob_implicit_flush(true);
 
             $buffer = '';
@@ -226,8 +223,13 @@ class InterrogateDocumentController extends Controller
 
     private function getDocumentById()
     {
-        if (preg_match('/^[a-f0-9]{24}$/i', $this->documentId)) {
-            $oid = new ObjectId($this->documentId);
+        return $this->findOwnedDocument($this->documentId);
+    }
+
+    private function findOwnedDocument(string $documentId): ?Upload
+    {
+        if (preg_match('/^[a-f0-9]{24}$/i', $documentId)) {
+            $oid = new ObjectId($documentId);
             return Upload::query()
                 ->where('_id', $oid)
                 ->where('user_id', $this->userId)

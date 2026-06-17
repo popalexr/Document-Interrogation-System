@@ -7,7 +7,7 @@ use App\Http\Requests\Interrogations\AIInterrogationRequest;
 use App\Models\AIInterrogation;
 use App\Models\AIInterrogationChat;
 use App\Models\Upload;
-use GuzzleHttp\Client;
+use App\Services\McpStreamClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -20,7 +20,10 @@ class InterrogationsController extends Controller
     private ?string $interrogationId;
     private $userId;
 
-    public function __construct(private Request $request)
+    public function __construct(
+        private Request $request,
+        private McpStreamClient $mcpClient,
+    )
     {
         $this->interrogationId = $request->get('id', null);
         $this->userId = optional($request->user())->getKey();
@@ -80,21 +83,8 @@ class InterrogationsController extends Controller
             config('mcp.ai_interrogation_endpoint')
         );
 
-        $client = new Client([
-            'timeout' => 120,
-            'connect_timeout' => 10,
-            'http_errors' => false,
-        ]);
-
         try {
-            $response = $client->post($mcpUrl, [
-                'stream' => true,
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'text/event-stream',
-                ],
-                'body' => json_encode($payload),
-            ]);
+            $response = $this->mcpClient->postStream($mcpUrl, $payload);
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => 'Failed to communicate with MCP server.',
@@ -117,7 +107,9 @@ class InterrogationsController extends Controller
             @ini_set('max_execution_time', '0');
             @ini_set('output_buffering', '0');
             @ini_set('zlib.output_compression', '0');
-            while (ob_get_level() > 0) { @ob_end_flush(); }
+            if (! app()->environment('testing')) {
+                while (ob_get_level() > 0) { @ob_end_flush(); }
+            }
             ob_implicit_flush(true);
 
             $buffer = '';

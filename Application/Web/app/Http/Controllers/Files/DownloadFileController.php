@@ -10,57 +10,34 @@ use Illuminate\Support\Facades\Storage;
 
 class DownloadFileController extends Controller
 {
-    private Upload|Edit|null $file;
-
-    private $storage;
-
-    public function __construct(private Request $request)
+    public function __invoke(Request $request)
     {
-        $fileId = $this->request->get('id', null);
-        $source = $this->request->get('source', 'upload');
-        $userId = (string) $this->request->user()?->getKey();
+        $file = $this->resolveFile($request);
 
-        $this->file = match ($source) {
-            'edit' => $fileId ? Edit::query()
-                ->where('_id', $fileId)
-                ->where('user_id', $userId)
-                ->first() : null,
-            default => $fileId ? Upload::query()
-                ->where('_id', $fileId)
-                ->where('user_id', $userId)
-                ->whereNull('deleted_at')
-                ->first() : null,
-        };
-
-        $this->storage = Storage::disk('r2');
-    }
-
-    public function __invoke()
-    {
-        if (blank($this->file)) {
+        if (blank($file)) {
             return redirect()->back()->with('error', 'File not found.');
         }
 
-        $this->storage = Storage::disk('r2');
-        $path = $this->file->r2_key;
+        $storage = Storage::disk('r2');
+        $path = $file->r2_key;
 
         if (blank($path)) {
             return redirect()->back()->with('error', 'File path is invalid.');
         }
 
-        if (! $this->storage->exists($path)) {
+        if (! $storage->exists($path)) {
             return redirect()->back()->with('error', 'File does not exist in storage.');
         }
 
-        $size = $this->getFileSize($path);
+        $size = $this->getFileSize($storage, $path);
 
-        $headers = $this->getHeader();
+        $headers = $this->getHeader($file);
 
         if (! is_null($size)) {
             $headers['Content-Length'] = (string) $size;
         }
 
-        $stream = $this->storage->readStream($path);
+        $stream = $storage->readStream($path);
 
         if ($stream === false) {
             return redirect()->back()->with('error', 'Failed to read the file from storage.');
@@ -72,23 +49,41 @@ class DownloadFileController extends Controller
             if (is_resource($stream)) {
                 fclose($stream);
             }
-        }, $this->file->original_name, $headers);
+        }, $file->original_name, $headers);
     }
 
-    private function getFileSize(string $path): ?int
+    private function resolveFile(Request $request): Upload|Edit|null
+    {
+        $fileId = $request->get('id', null);
+        $source = $request->get('source', 'upload');
+        $userId = (string) $request->user()?->getKey();
+
+        $file = is_string($fileId)
+            ? ($source === 'edit'
+                ? Edit::query()->whereKey($fileId)->first()
+                : Upload::query()->whereKey($fileId)->first())
+            : null;
+
+        return $file && (string) $file->user_id === $userId
+            && (! $file instanceof Upload || blank($file->deleted_at))
+                ? $file
+                : null;
+    }
+
+    private function getFileSize($storage, string $path): ?int
     {
         try {
-            return $this->storage->size($path);
+            return $storage->size($path);
         } catch (\Exception $e) {
             return null;
         }
     }
 
-    private function getHeader(): array
+    private function getHeader(Upload|Edit $file): array
     {
         return [
-            'Content-Type'          => $this->file->mime_type ?? 'application/octet-stream',
-            'Content-Disposition'   => 'attachment; filename="'.$this->file->original_name.'"',
+            'Content-Type'          => $file->mime_type ?? 'application/octet-stream',
+            'Content-Disposition'   => 'attachment; filename="'.$file->original_name.'"',
             'X-Content-Type-Options' => 'nosniff',
         ];
     }
