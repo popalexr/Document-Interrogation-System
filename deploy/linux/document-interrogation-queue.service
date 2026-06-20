@@ -1,0 +1,18 @@
+[Unit]
+Description=Document Interrogation Laravel queue worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_GROUP__
+WorkingDirectory="__PROJECT_ROOT__/Application/Web"
+ExecStart="__PHP_PATH__" artisan queue:work --sleep=3 --tries=3 --timeout=90
+Restart=always
+RestartSec=5
+TimeoutStopSec=3600
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

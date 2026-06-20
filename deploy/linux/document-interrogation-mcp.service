@@ -1,0 +1,17 @@
+[Unit]
+Description=Document Interrogation MCP server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_GROUP__
+WorkingDirectory="__PROJECT_ROOT__/Application/MCP_Server"
+ExecStart="__PROJECT_ROOT__/Application/MCP_Server/.venv/bin/python" mcp_client.py
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
