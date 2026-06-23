@@ -7,8 +7,8 @@ Wants=network-online.target
 Type=simple
 User=__SERVICE_USER__
 Group=__SERVICE_GROUP__
-WorkingDirectory="__PROJECT_ROOT__/Application/Web"
-ExecStart="__PHP_PATH__" artisan queue:work --sleep=3 --tries=3 --timeout=90
+WorkingDirectory=__PROJECT_ROOT__/Application/Web
+ExecStart=__PHP_PATH__ artisan queue:work --sleep=3 --tries=3 --timeout=90
 Restart=always
 RestartSec=5
 TimeoutStopSec=3600

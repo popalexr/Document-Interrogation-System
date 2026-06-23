@@ -19,6 +19,11 @@ fi
 PROJECT_ROOT="$(realpath "$PROJECT_ROOT")"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
+if [[ "$PROJECT_ROOT" =~ [[:space:]] || "$PHP_PATH" =~ [[:space:]] ]]; then
+    echo "Project and PHP paths must not contain whitespace." >&2
+    exit 1
+fi
+
 if [[ ! -x "$PROJECT_ROOT/Application/MCP_Server/.venv/bin/python" ]]; then
     echo "Missing executable: $PROJECT_ROOT/Application/MCP_Server/.venv/bin/python" >&2
     exit 1
@@ -46,6 +51,12 @@ for service in document-interrogation-mcp document-interrogation-queue; do
         -e "s|__PHP_PATH__|$PHP_ESCAPED|g" \
         "$SCRIPT_DIR/$service.service" > "/etc/systemd/system/$service.service"
 done
+
+if command -v systemd-analyze >/dev/null 2>&1; then
+    systemd-analyze verify \
+        /etc/systemd/system/document-interrogation-mcp.service \
+        /etc/systemd/system/document-interrogation-queue.service
+fi
 
 systemctl daemon-reload
 systemctl enable --now document-interrogation-mcp.service document-interrogation-queue.service
